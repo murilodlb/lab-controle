@@ -58,6 +58,63 @@ pdfkeywords={Controle,Automação,UFRN,DCA},
 hidelinks]{hyperref}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%% MACROS DO TEMPLATE %%%%%%%%
+% \dado{x}      -> dado experimental a preencher/conferir (vermelho no rascunho)
+% \pv           -> célula/valor ainda vazio (atalho para \dado{?})
+% \pendente{x}  -> orientação de discussão a completar (azul no rascunho,
+%                  some na versão final)
+% Para gerar a versão final, troque \rascunhotrue por \rascunhofalse.
+\newif\ifrascunho
+\rascunhotrue
+\ifrascunho
+  \newcommand{\dado}[1]{\textcolor{red}{\textbf{[#1]}}}
+  \newcommand{\pendente}[1]{\textcolor{blue}{\textit{[PENDENTE: #1]}}}
+\else
+  \newcommand{\dado}[1]{#1}
+  \newcommand{\pendente}[1]{}
+\fi
+\newcommand{\pv}{\dado{?}}
+
+% \grafico[largura]{caminho/sem/extensao}
+% Inclui caminho.pdf (ou .png) se existir; caso contrário desenha uma caixa
+% "Figura pendente" com o caminho esperado. Arquivos .svg/.fig NÃO são lidos
+% pelo pdflatex: exporte-os para .pdf com o mesmo nome, por exemplo:
+%   rsvg-convert -f pdf -o arquivo.pdf arquivo.svg
+%   inkscape arquivo.svg --export-filename=arquivo.pdf
+%   (MATLAB) exportgraphics(openfig('arquivo.fig'),'arquivo.pdf','ContentType','vector')
+\newcommand{\grafico}[2][0.48\textwidth]{%
+  \IfFileExists{#2.pdf}{\includegraphics[width=#1]{{#2}.pdf}}{%
+    \IfFileExists{#2.png}{\includegraphics[width=#1]{{#2}.png}}{%
+      \fbox{\parbox[c][\dimexpr #1*55/100\relax][c]{\dimexpr #1-2\fboxsep-2\fboxrule\relax}{%
+        \centering\footnotesize\color{red}Figura pendente\\[2pt]\nolinkurl{#2}}}}}}
+
+% \figuraensaio{legenda}{rótulo}{saída}{sinal de controle}{erro}{ações}
+% Figura 2x2 padrão de um ensaio de malha simples.
+\newcommand{\figuraensaio}[6]{%
+\begin{figure}[H]
+  \centering
+  \subfloat[Nível medido (PV) e referência (SP)]{\grafico{#3}}\hfill
+  \subfloat[Sinal de controle (MV)]{\grafico{#4}}\\
+  \subfloat[Sinal de erro]{\grafico{#5}}\hfill
+  \subfloat[Ações de controle (P, I e D)]{\grafico{#6}}
+  \caption{#1}
+  \label{#2}
+\end{figure}}
+
+% \figuracascata{legenda}{rótulo}{L2 e ref.}{L1 e L1d}{Vp}{erros}
+% Figura 2x2 padrão de um ensaio com controle em cascata.
+\newcommand{\figuracascata}[6]{%
+\begin{figure}[H]
+  \centering
+  \subfloat[Nível $L_2$ e referência $r$]{\grafico{#3}}\hfill
+  \subfloat[Nível $L_1$ e referência interna $L_{1d}$]{\grafico{#4}}\\
+  \subfloat[Tensão na bomba $V_P$ (MV)]{\grafico{#5}}\hfill
+  \subfloat[Erros $e_x = r - L_2$ e $e_i = L_{1d} - L_1$]{\grafico{#6}}
+  \caption{#1}
+  \label{#2}
+\end{figure}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \begin{document}
 
 \onehalfspacing
@@ -205,12 +262,12 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \vspace{\baselineskip}
 
 \begin{justify}
-    Resumo
+    \hspace{4ex}Este relatório apresenta o projeto, a implementação e a avaliação experimental de controladores P, PI, PD e PID, incluindo filtro na ação derivativa e mecanismo \textit{anti-reset windup}, aplicados ao sistema de tanques acoplados da Quanser\textsuperscript{\textregistered}. Os controladores foram implementados no ambiente MATLAB\textsuperscript{\textregistered}/SIMULINK\textsuperscript{\textregistered} com o QUARC\textsuperscript{\textregistered}, a partir de blocos básicos (ganhos, somadores, integradores e derivadores), com o sinal de controle saturado em $\pm 4$~V. Foram realizados três experimentos: o controle do nível do tanque 1, que se comporta como um sistema de primeira ordem (Experimento 2A); o controle do nível do tanque 2 na configuração 2, que se comporta como um sistema de segunda ordem, com um sistema de intertravamentos para garantir a segurança da operação (Experimento 2B); e o controle em cascata do nível do tanque 2, com uma malha interna para o tanque 1 (Experimento 2C). Para cada lei de controle, investigou-se a influência dos ganhos sobre o sobressinal, os tempos de subida e de acomodação e o erro em regime permanente. \pendente{Resumir em 2--3 frases os principais resultados: melhor lei de controle em cada experimento, efeito do filtro derivativo e do anti-windup, ganho de desempenho obtido com a cascata.}
 \end{justify}
 
 \vspace{\baselineskip}
 
-\noindent\textbf{Palavras-chave:} Sistemas de controle. Tanques acoplados. Calibração de sensores. PID.
+\noindent\textbf{Palavras-chave:} Sistemas de controle. Tanques acoplados. Controle PID. Anti-windup. Controle em cascata.
 
 \newpage
 
@@ -270,6 +327,16 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 
 \newpage
 
+%%%%%%%%% LISTA DE TABELAS %%%%%%%%%%%
+
+\thispagestyle{empty}
+
+\begin{center}
+\listoftables
+\end{center}
+
+\newpage
+
 %%%%%%%%%%%%%%% SUMÁRIO %%%%%%%%%%%%%%
 
 \thispagestyle{empty}
@@ -287,7 +354,19 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \section{INTRODUÇÃO}
 
 \begin{justify}
-    Introdução
+    \hspace{4ex}A introdução de um controlador em um sistema dinâmico visa modificar o seu comportamento, atuando sobre uma ou mais variáveis manipuladas (MV) para que as variáveis de processo (PV) satisfaçam especificações de desempenho tanto no regime transitório quanto no regime permanente. Dentre as estratégias de controle existentes, o controlador Proporcional-Integral-Derivativo (PID) e as suas variações (P, PI e PD) continuam sendo as mais empregadas na indústria, em virtude de sua simplicidade, robustez e da interpretação física direta de cada uma de suas ações.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Esta segunda unidade da disciplina tem como foco o controle em malha fechada da planta dos tanques acoplados, explorando de forma progressiva as ações de controle e as modificações práticas necessárias para que o controlador opere adequadamente em um sistema real, sujeito a ruído de medição e a limites físicos do atuador.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}As atividades foram divididas em três experimentos. No Experimento 2A, controlou-se o nível do tanque 1, que se comporta como um sistema de primeira ordem, implementando-se sucessivamente as ações proporcional, integral e derivativa, o filtro na ação derivativa e o filtro \textit{anti-reset windup}. No Experimento 2B, o mesmo procedimento foi aplicado ao controle do nível do tanque 2 na configuração 2, em que o sistema passa a se comportar como um sistema de segunda ordem, e implementou-se um sistema de intertravamentos para garantir a segurança da operação. Por fim, no Experimento 2C, adotou-se a estratégia de controle em cascata, na qual uma malha externa (mestre) controla o nível do tanque 2 e uma malha interna (escrava) controla o nível do tanque 1.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Em todos os experimentos, os controladores foram implementados no MATLAB\textsuperscript{\textregistered}/SIMULINK\textsuperscript{\textregistered} utilizando apenas blocos básicos, sem o uso de blocos PID prontos, e o sinal de controle foi saturado em $\pm 4$~V, respeitando os limites operacionais da bomba. O objetivo deste relatório é descrever a implementação realizada e analisar, com base nas curvas de resposta e nos sinais de controle obtidos, a diferença de comportamento do sistema com cada lei de controle e com diferentes valores de ganhos.
 \end{justify}
 
 \newpage
@@ -310,8 +389,103 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 
 \section{METODOLOGIA}
 
+\subsection{Aparato Experimental}
+
 \begin{justify}
-    Metodologia
+    \hspace{4ex}Os experimentos foram conduzidos na bancada do sistema de tanques acoplados da Quanser\textsuperscript{\textregistered}, integrada a um microcomputador com Windows e os softwares MATLAB\textsuperscript{\textregistered}/SIMULINK\textsuperscript{\textregistered} e QUARC\textsuperscript{\textregistered}. A comunicação entre a planta e o computador foi realizada por meio da placa de aquisição de dados Q8-USB e do módulo de potência VoltPAQ-X1, que amplifica a tensão enviada pelo \textit{software} por um ganho de 3 antes de aplicá-la à bomba. Os níveis dos tanques foram obtidos a partir da tensão dos sensores de pressão, convertida em centímetros pela curva de calibração obtida na primeira unidade ($6{,}25$~cm/V). Em todos os ensaios utilizou-se o orifício de saída \dado{médio} em ambos os tanques.
+\end{justify}
+
+\subsection{Implementação do Controlador PID}
+
+\begin{justify}
+    \hspace{4ex}O controlador foi implementado na forma paralela utilizando apenas blocos básicos do SIMULINK\textsuperscript{\textregistered} (ganhos, somadores, integrador e derivador), sem o uso de blocos PID prontos. Na forma paralela, o sinal de controle é dado pela Equação~\eqref{eq:pid_paralelo}, em que $e(t) = r(t) - y(t)$ é o erro entre a referência (SP) e o nível medido (PV).
+\end{justify}
+
+\begin{equation}
+    u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\, d\tau + K_d \frac{de(t)}{dt}
+    \label{eq:pid_paralelo}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}A implementação foi feita de forma incremental: inicialmente apenas a ação proporcional foi utilizada e, a cada etapa, novos testes foram realizados após a inclusão da ação integral, da ação derivativa, do filtro na ação derivativa e do filtro \textit{anti-reset windup}. As ações são somadas e o resultado é limitado por um bloco de saturação em $\pm 4$~V antes de ser enviado à bomba.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Para reduzir a amplificação do ruído de medição pela ação derivativa, o derivador puro foi substituído por um derivador filtrado, conforme a Equação~\eqref{eq:filtro_derivativo}, em que $\tau_f$ é a constante de tempo do filtro (\pendente{confirmar a forma usada: $\tau_f$, $\tau_d/N$ ou outra}).
+\end{justify}
+
+\begin{equation}
+    D(s) = \frac{K_d\, s}{\tau_f\, s + 1}
+    \label{eq:filtro_derivativo}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}O filtro \textit{anti-reset windup} foi implementado pelo método de \textit{back-calculation} (\pendente{confirmar}): a diferença entre o sinal de controle saturado ($u_{sat}$) e o não saturado ($u$) é multiplicada por um ganho $K_{aw}$ e realimentada na entrada do integrador, de acordo com a Equação~\eqref{eq:antiwindup}. Assim, enquanto o atuador está saturado, o integrador é descarregado e deixa de acumular erro.
+\end{justify}
+
+\begin{equation}
+    \frac{dI(t)}{dt} = K_i\, e(t) + K_{aw}\left[u_{sat}(t) - u(t)\right]
+    \label{eq:antiwindup}
+\end{equation}
+
+\subsection{Experimento 2A: Controle do Nível do Tanque 1}
+
+\begin{justify}
+    \hspace{4ex}No Experimento 2A, o sistema foi utilizado na configuração 1, em que a bomba alimenta o tanque 1 e a variável controlada é o nível $L_1$. Nessa configuração, o processo se comporta como um sistema de primeira ordem. Como referência, aplicou-se \dado{descrever o sinal de referência: degraus de ? cm para ? cm, onda quadrada de período ? s etc.}, com duração total de \dado{?}~s por ensaio. Para cada lei de controle (P, PI, PD, PID, PID com filtro derivativo e PID com \textit{anti-reset windup}), foram realizados ensaios com pelo menos dois conjuntos de ganhos, registrando-se o nível, o sinal de controle, o erro e a contribuição de cada ação de controle.
+\end{justify}
+
+\subsection{Experimento 2B: Controle do Nível do Tanque 2}
+
+\begin{justify}
+    \hspace{4ex}No Experimento 2B, o sistema foi utilizado na configuração 2, em que a bomba alimenta o tanque 1, cuja vazão de saída alimenta o tanque 2. A variável controlada passa a ser o nível $L_2$, e o processo se comporta como um sistema de segunda ordem formado por dois sistemas de primeira ordem em série. A referência aplicada foi \dado{descrever}. O mesmo procedimento incremental do Experimento 2A foi seguido para as leis de controle P, PI, PID, PID com filtro derivativo e PID com \textit{anti-reset windup}.
+\end{justify}
+
+\subsubsection{Sistema de Intertravamentos}
+
+\begin{justify}
+    \hspace{4ex}Antes dos ensaios em malha fechada, foi implementado um sistema de intertravamentos para garantir a segurança da operação, seguindo as regras definidas no roteiro:
+\end{justify}
+
+\begin{itemize}
+    \item a tensão enviada à bomba é limitada à faixa de $\pm 4$~V;
+    \item tensões negativas (bomba sorvendo água) são bloqueadas quando o nível do tanque 1 está abaixo de \dado{?}~cm, isto é, próximo da ponta da mangueira de alimentação;
+    \item o nível do tanque 1 não pode ultrapassar \dado{30}~cm, o que, com o orifício médio, impede também o transbordamento do tanque 2. Quando o limite é atingido, \dado{descrever a ação: tensão zerada, tensão de equilíbrio, desligamento etc.};
+    \item o nível do tanque 2 não pode ultrapassar \dado{15}~cm;
+    \item o desligamento de segurança (\textit{shutdown}) ocorre apenas em condição anormal de operação, a saber: \dado{descrever as condições}.
+\end{itemize}
+
+\begin{justify}
+    \hspace{4ex}A lógica implementada é apresentada na Figura~\ref{fig:simulink_intertravamento}. \pendente{Descrever brevemente a lógica (comparadores, chaves, blocos lógicos) e a ordem de prioridade entre as regras.}
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/simulink/intertravamento}
+    \caption{Lógica de intertravamentos implementada no SIMULINK.}
+    \label{fig:simulink_intertravamento}
+\end{figure}
+
+\subsection{Experimento 2C: Controle em Cascata}
+
+\begin{justify}
+    \hspace{4ex}No Experimento 2C, mantida a configuração 2, adotou-se a estratégia de controle em cascata. A malha externa (mestre) recebe o erro $e_x = r - L_2$ e calcula o nível desejado para o tanque 1, $L_{1d}$. A malha interna (escrava) recebe o erro $e_i = L_{1d} - L_1$ e calcula a tensão $V_P$ aplicada à bomba. A saída do controlador mestre foi limitada à faixa de \dado{0} a \dado{30}~cm, de forma que a referência interna respeite os limites operacionais do tanque 1. Os intertravamentos do Experimento 2B foram mantidos. O diagrama implementado é apresentado na Figura~\ref{fig:simulink_cascata}.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Foram testadas as combinações de controladores P, PI e PID na malha mestre com controladores P, PI, PID, PID com filtro derivativo e PID com \textit{anti-reset windup} na malha escrava, e, para cada combinação, diferentes valores de ganhos. Os resultados também foram comparados aos obtidos com uma única malha de controle no Experimento 2B.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/simulink/cascata}
+    \caption{Diagrama de blocos do controle em cascata implementado no SIMULINK.}
+    \label{fig:simulink_cascata}
+\end{figure}
+
+\subsection{Métricas de Desempenho}
+
+\begin{justify}
+    \hspace{4ex}Para comparar os ensaios, foram extraídas das respostas ao degrau as seguintes métricas: sobressinal máximo ($M_p$), em porcentagem do valor final; tempo de subida ($t_r$), tomado como o intervalo entre 10\% e 90\% da variação do nível (\pendente{confirmar critério: 0--100\% ou 10--90\%}); tempo de acomodação ($t_s$), com critério de 2\%; e erro em regime permanente ($e_{ss}$), em centímetros. Além disso, o sinal de controle foi avaliado qualitativamente quanto ao tempo em saturação e à presença de ruído. As métricas foram calculadas \pendente{descrever: manualmente pelos gráficos ou por script em MATLAB/Python (incluir no Apêndice)}.
 \end{justify}
 
 \newpage
@@ -322,10 +496,623 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 
 \section{RESULTADOS}
 
-\subsection{Experimento 2A}
+% Convenção sugerida para os arquivos de figura (sem extensão; exporte .svg/.fig para .pdf):
+%   img/<EXP>/<LEI>/ensaioN-{saida,controle,erro,acoes}       (malha simples)
+%   img/2C/<MESTRE>-<ESCRAVO>/ensaioN-{l2,l1,vp,erros}          (cascata)
+% Os caminhos do Experimento 2A já apontam para os arquivos existentes em img/.
+
+\subsection{Experimento 2A: Controle do Nível do Tanque 1 (Primeira Ordem)}
 
 \begin{justify}
-    Resultados
+    \hspace{4ex}Esta seção apresenta os resultados do controle do nível do tanque 1. Para cada lei de controle, são exibidos o nível medido e a referência, o sinal de controle enviado à bomba, o sinal de erro e a contribuição individual de cada ação de controle. As métricas de desempenho de cada ensaio são resumidas em tabelas e comparadas na Seção~\ref{sec:2a_comparativo}.
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador P}
+
+\begin{justify}
+    \hspace{4ex}As Figuras~\ref{fig:2a_p_1} e~\ref{fig:2a_p_2} apresentam a resposta do sistema com controle proporcional para $K_p = 1$ e $K_p = 2$, respectivamente, e a Tabela~\ref{tab:2a_p} resume as métricas obtidas.
+\end{justify}
+
+\figuraensaio{Experimento 2A -- Controlador P com $K_p = 1$.}{fig:2a_p_1}
+    {img/P/P_gain_1}{img/P/P_gain_1_control_signals}{img/P/P_gain_1_error}{img/P/P_gain_1_actions}
+
+\figuraensaio{Experimento 2A -- Controlador P com $K_p = 2$.}{fig:2a_p_2}
+    {img/P/P_gain_2}{img/P/P_gain_2_control_signals}{img/P/P_gain_2_error}{img/P/P_gain_2_actions}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador P no Experimento 2A.}
+\label{tab:2a_p}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & 1 & \pv & \pv & \pv & \pv \\ \hline
+2 & 2 & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Como o tanque 1 é um sistema do tipo 0, o controlador proporcional não é capaz de eliminar o erro em regime permanente. Fisicamente, para manter o nível constante, a bomba precisa fornecer uma vazão igual à vazão de saída pelo orifício, o que exige uma tensão de equilíbrio $V_{P0}$ não nula. Como, no controle P, $u = K_p\, e$, essa tensão só existe se houver um erro residual $e_{ss} \approx V_{P0}/K_p$. Assim, espera-se que o aumento de $K_p$ reduza o erro em regime e torne a resposta mais rápida, já que a constante de tempo em malha fechada do modelo linearizado é $\tau/(1 + K_p K_{dc})$. Por outro lado, ganhos maiores levam o sinal de controle à saturação logo após cada mudança de referência e amplificam o ruído de medição no sinal enviado à bomba.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Os resultados \pendente{confirmar} esse comportamento: o erro em regime passou de \dado{?}~cm com $K_p = 1$ para \dado{?}~cm com $K_p = 2$, e o tempo de acomodação passou de \dado{?}~s para \dado{?}~s. \pendente{Comentar a saturação do sinal de controle após os degraus, o nível de ruído na MV, a presença ou não de sobressinal (em teoria, um sistema de primeira ordem com controle P não apresenta sobressinal) e se o erro em regime é próximo de $V_{P0}/K_p$.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PI}
+
+\begin{justify}
+    \hspace{4ex}As Figuras~\ref{fig:2a_pi_1} e~\ref{fig:2a_pi_2} apresentam a resposta com controle PI, mantendo $K_p = 2$ e variando o ganho integral.
+\end{justify}
+
+\figuraensaio{Experimento 2A -- Controlador PI com $K_p = 2$ e $K_i = 0{,}03$.}{fig:2a_pi_1}
+    {img/PI/pi_gain_kp2_ki003}{img/PI/pi_gain_kp2_ki003_control}{img/PI/pi_gain_kp2_ki003_error}{img/PI/pi_gain_kp2_ki003_actions}
+
+\figuraensaio{Experimento 2A -- Controlador PI com $K_p = 2$ e $K_i = 0{,}2$.}{fig:2a_pi_2}
+    {img/PI/pi_gain_kp2_ki02}{img/PI/pi_gain_kp2_ki02_control}{img/PI/pi_gain_kp2_ki02_error}{img/PI/pi_gain_kp2_ki02_actions}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PI no Experimento 2A.}
+\label{tab:2a_pi}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & 2 & 0,03 & \pv & \pv & \pv & \pv \\ \hline
+2 & 2 & 0,2  & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}A inclusão da ação integral eleva o tipo do sistema em uma unidade, de modo que o erro em regime ao degrau tende a zero: em regime, a tensão de equilíbrio $V_{P0}$ passa a ser fornecida pelo integrador, e não mais por um erro residual. Em contrapartida, o sistema em malha fechada passa a ser de segunda ordem, podendo apresentar sobressinal e oscilações à medida que $K_i$ aumenta. Além disso, durante os intervalos em que o sinal de controle permanece saturado, o integrador continua acumulando erro (\textit{windup}), o que tende a aumentar o sobressinal e o tempo de acomodação.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Com $K_i = 0{,}03$, \pendente{descrever: eliminação lenta do erro, ausência/presença de sobressinal, $t_s$}. Com $K_i = 0{,}2$, \pendente{descrever: correção mais rápida do erro, aumento do sobressinal ($M_p = $ \dado{?}\%), oscilações, efeito do windup visível no gráfico da ação integral}. \pendente{Comparar com o controlador P: o erro em regime foi eliminado?}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PD}
+
+\begin{justify}
+    \hspace{4ex}As Figuras~\ref{fig:2a_pd_1} a~\ref{fig:2a_pd_3} apresentam a resposta com controle PD para diferentes valores do ganho derivativo.
+\end{justify}
+
+\figuraensaio{Experimento 2A -- Controlador PD com $K_d = 0{,}1$.}{fig:2a_pd_1}
+    {img/PD/pd-0.1-saida}{img/PD/pd-0.1-control}{img/PD/pd-0.1-error}{img/PD/pd-0.1-actions}
+
+\figuraensaio{Experimento 2A -- Controlador PD com $K_d = 1$.}{fig:2a_pd_2}
+    {img/PD/pd-1-saida}{img/PD/pd-1-control}{img/PD/pd-1-error}{img/PD/pd-1-actions}
+
+\figuraensaio{Experimento 2A -- Controlador PD com $K_p = 2$ e $K_d = 0{,}3$.}{fig:2a_pd_3}
+    {img/PD/p-2-d-0.3-saida}{img/PD/p-2-d-0.3-control}{img/PD/p-2-d-0.3-error}{img/PD/p-2-d-0.3-actions}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PD no Experimento 2A.}
+\label{tab:2a_pd}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_d}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & \pv & 0,1 & \pv & \pv & \pv & \pv \\ \hline
+2 & \pv & 1   & \pv & \pv & \pv & \pv \\ \hline
+3 & 2   & 0,3 & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}A ação derivativa reage à taxa de variação do erro, introduzindo um efeito antecipatório. Entretanto, em um sistema de primeira ordem, o benefício dessa ação é limitado: no modelo linearizado, a malha fechada com PD continua sendo de primeira ordem, com constante de tempo $(\tau + K_d K_{dc})/(1 + K_p K_{dc})$, e o erro em regime permanece o mesmo do controlador P, já que a ação derivativa é nula em regime. Na prática, os efeitos mais visíveis são os picos no sinal de controle a cada mudança brusca da referência (\textit{derivative kick}), que levam a bomba imediatamente à saturação, e a amplificação do ruído do sensor de nível, que torna o sinal de controle mais ruidoso à medida que $K_d$ aumenta.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Comparar os três ensaios: amplitude do ruído na MV com $K_d = 0{,}1$ e $K_d = 1$, picos de derivative kick, erro em regime (deve ser próximo ao do controlador P com o mesmo $K_p$) e se houve alguma melhora perceptível no transitório.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PID}
+
+\begin{justify}
+    \hspace{4ex}As Figuras~\ref{fig:2a_pid_1} e~\ref{fig:2a_pid_2} apresentam a resposta com o controlador PID completo, ainda sem filtro na ação derivativa e sem \textit{anti-reset windup}.
+\end{justify}
+
+\figuraensaio{Experimento 2A -- Controlador PID com $K_p = 1{,}8$, $K_i = 0{,}03$ e $K_d = 0{,}1$.}{fig:2a_pid_1}
+    {img/PID/p1.8-i0.03-d0.1-saida}{img/PID/p1.8-i0.03-d0.1-control}{img/PID/p1.8-i0.03-d0.1-error}{img/PID/p1.8-i0.03-d0.1-actions}
+
+\figuraensaio{Experimento 2A -- Controlador PID com $K_p = 1{,}8$, $K_i = 0{,}1$ e $K_d = 0{,}5$.}{fig:2a_pid_2}
+    {img/PID/p1.8-i0.1-d0.5-saida}{img/PID/p1.8-i0.1-d0.5-control}{img/PID/p1.8-i0.1-d0.5-error}{img/PID/p1.8-i0.1-d0.5-action}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PID no Experimento 2A.}
+\label{tab:2a_pid}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & 1,8 & 0,03 & 0,1 & \pv & \pv & \pv & \pv \\ \hline
+2 & 1,8 & 0,1  & 0,5 & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}O controlador PID combina a eliminação do erro em regime proporcionada pela ação integral com o efeito antecipatório da ação derivativa. Espera-se, portanto, erro em regime nulo, como no PI, e um transitório com sobressinal possivelmente menor, à custa de um sinal de controle mais ruidoso devido ao derivador puro.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Discutir os dois ensaios: o aumento simultâneo de $K_i$ e $K_d$ no ensaio 2 alterou o sobressinal e o tempo de acomodação? O ruído na MV ficou significativo com $K_d = 0{,}5$? Usar o gráfico das ações para mostrar qual ação domina no transitório e no regime.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PID com Filtro na Ação Derivativa}
+
+\begin{justify}
+    \hspace{4ex}As Figuras~\ref{fig:2a_pidf_1} e~\ref{fig:2a_pidf_2} apresentam a resposta com o controlador PID com filtro na ação derivativa, conforme a Equação~\eqref{eq:filtro_derivativo}.
+\end{justify}
+
+\figuraensaio{Experimento 2A -- PID com filtro derivativo: $K_p = 2$, $K_i = 0{,}03$, $K_d = 0{,}13$ e $\tau_f = 0{,}05$.}{fig:2a_pidf_1}
+    {img/PID-F/p2-i003-d013-f005-saida}{img/PID-F/p2-i003-d013-f005-control}{img/PID-F/p2-i003-d013-f005-error}{img/PID-F/p2-i003-d013-f005-actions}
+
+\figuraensaio{Experimento 2A -- PID com filtro derivativo: $K_p = 2$, $K_i = 0{,}08$, $K_d = 0{,}05$ e $\tau_f = 0{,}1$.}{fig:2a_pidf_2}
+    {img/PID-F/p2-i008-d005-f01-saida}{img/PID-F/p2-i008-d005-f01-control}{img/PID-F/p2-i008-d005-f01-error}{img/PID-F/p2-i008-d005-f01-actions}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PID com filtro derivativo no Experimento 2A.}
+\label{tab:2a_pidf}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\boldsymbol{\tau_f}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & 2 & 0,03 & 0,13 & 0,05 & \pv & \pv & \pv & \pv \\ \hline
+2 & 2 & 0,08 & 0,05 & 0,1  & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}O filtro de primeira ordem limita o ganho da ação derivativa em altas frequências, região em que se concentra o ruído de medição. Espera-se, portanto, um sinal de controle visivelmente menos ruidoso e picos de \textit{derivative kick} de menor amplitude, sem alteração significativa da resposta do nível. Quanto maior $\tau_f$, maior a atenuação do ruído, mas também maior o atraso introduzido na ação derivativa, o que reduz o seu efeito antecipatório.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Comparar o sinal de controle e a ação derivativa com os do PID sem filtro (Figuras~\ref{fig:2a_pid_1} e~\ref{fig:2a_pid_2}): redução do ruído, amplitude dos picos e efeito de $\tau_f = 0{,}05$ em relação a $\tau_f = 0{,}1$.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PID com Filtro \textit{Anti-Reset Windup}}
+
+\begin{justify}
+    \hspace{4ex}As Figuras~\ref{fig:2a_pidaw_1} e~\ref{fig:2a_pidaw_2} apresentam a resposta com o controlador PID com filtro \textit{anti-reset windup}, conforme a Equação~\eqref{eq:antiwindup}.
+\end{justify}
+
+\figuraensaio{Experimento 2A -- PID com anti-windup: $K_p = 2$, $K_i = 0{,}035$, $K_d = 0{,}08$ e $K_{aw} = 0{,}001$.}{fig:2a_pidaw_1}
+    {img/PID-AW/p2-i0035-d008-aw0001-saida}{img/PID-AW/p2-i0035-d008-aw0001-control}{img/PID-AW/p2-i0035-d008-aw0001-error}{img/PID-AW/p2-i0035-d008-aw0001-actions}
+
+\figuraensaio{Experimento 2A -- PID com anti-windup: $K_p = 2$, $K_i = 0{,}05$, $K_d = 0{,}1$ e $K_{aw} = 0{,}1$.}{fig:2a_pidaw_2}
+    {img/PID-AW/p2-i005-d01-aw01-saida}{img/PID-AW/p2-i005-d01-aw01-control}{img/PID-AW/p2-i005-d01-aw01-error}{img/PID-AW/p2-i005-d01-aw01-actions}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PID com \textit{anti-reset windup} no Experimento 2A.}
+\label{tab:2a_pidaw}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\mathbf{K_{aw}}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & 2 & 0,035 & 0,08 & 0,001 & \pv & \pv & \pv & \pv \\ \hline
+2 & 2 & 0,05  & 0,1  & 0,1   & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Quando o sinal de controle satura, a planta passa a receber uma tensão constante independentemente do erro, mas o integrador continua acumulando-o. Ao se aproximar da referência, a ação integral está sobrecarregada e mantém a bomba atuando além do necessário, gerando sobressinal elevado e acomodação lenta. O mecanismo de \textit{anti-reset windup} realimenta a diferença $u_{sat} - u$ no integrador, descarregando-o enquanto houver saturação. Espera-se, portanto, que o sobressinal e o tempo de acomodação diminuam em relação ao PID sem \textit{anti-windup}, sendo o efeito tanto maior quanto maior o ganho $K_{aw}$.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Comparar a ação integral durante a saturação com e sem anti-windup. Com $K_{aw} = 0{,}001$ o efeito deve ser praticamente imperceptível; com $K_{aw} = 0{,}1$, verificar a redução de $M_p$ (\dado{?}\% $\rightarrow$ \dado{?}\%) e de $t_s$.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Comparativo entre as Leis de Controle}
+\label{sec:2a_comparativo}
+
+\begin{justify}
+    \hspace{4ex}A Tabela~\ref{tab:2a_comparativo} reúne o melhor ensaio obtido com cada lei de controle no Experimento 2A.
+\end{justify}
+
+\begin{table}[H]
+\centering
+\caption{Comparativo entre as leis de controle no Experimento 2A (melhor ensaio de cada lei).}
+\label{tab:2a_comparativo}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Controlador} & \textbf{Ganhos} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} & \textbf{Ruído na MV} \\ \hline
+P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PD         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}De forma geral, os controladores sem ação integral (P e PD) apresentam erro em regime não nulo, enquanto as leis com ação integral eliminam esse erro. A ação derivativa, por sua vez, tem efeito limitado no transitório de um sistema de primeira ordem e torna necessário o uso do filtro para que o sinal de controle seja aceitável para o atuador. \pendente{Concluir qual lei apresentou o melhor compromisso entre rapidez, sobressinal, erro em regime e esforço de controle, justificando com os valores da tabela.}
+\end{justify}
+
+\newpage
+
+%=============================================================
+\subsection{Experimento 2B: Controle do Nível do Tanque 2 (Segunda Ordem)}
+
+\begin{justify}
+    \hspace{4ex}Nesta seção são apresentados a validação do sistema de intertravamentos e os resultados do controle do nível do tanque 2 na configuração 2. Diferentemente do Experimento 2A, a planta vista pelo controlador é formada por dois tanques em série, o que adiciona um polo à malha e torna o sistema mais propenso a sobressinal e oscilações.
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Validação do Sistema de Intertravamentos}
+
+\begin{justify}
+    \hspace{4ex}Para verificar a lógica de segurança, foram provocadas propositalmente as situações de risco previstas, conforme a Tabela~\ref{tab:2b_intertravamento}. A Figura~\ref{fig:2b_intertravamento} mostra \pendente{descrever o ensaio: por exemplo, referência elevada para forçar o limite de 30~cm no tanque 1}.
+\end{justify}
+
+\begin{table}[H]
+\centering
+\caption{Testes do sistema de intertravamentos.}
+\label{tab:2b_intertravamento}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|c|}
+\hline
+\textbf{Condição testada} & \textbf{Ação esperada} & \textbf{Ação observada} & \textbf{OK?} \\ \hline
+Sinal de controle acima de $+4$~V ou abaixo de $-4$~V & Saturação em $\pm 4$~V & \pv & \pv \\ \hline
+Tensão negativa com $L_1 <$ \dado{?}~cm & Bloquear tensão negativa & \pv & \pv \\ \hline
+$L_1 \geq$ \dado{30}~cm & \dado{?} & \pv & \pv \\ \hline
+$L_2 \geq$ \dado{?}~cm & \dado{?} & \pv & \pv \\ \hline
+Condição anormal (\dado{?}) & \textit{Shutdown} & \pv & \pv \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Níveis $L_1$ e $L_2$]{\grafico{img/2B/intertravamento/niveis}}\hfill
+    \subfloat[Sinal de controle antes e após o intertravamento]{\grafico{img/2B/intertravamento/controle}}
+    \caption{Experimento 2B -- Atuação do sistema de intertravamentos.}
+    \label{fig:2b_intertravamento}
+\end{figure}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Discutir se todas as regras atuaram como esperado e se houve algum desligamento indevido em operação normal (Obs.~3 do roteiro). Comentar que, enquanto o intertravamento atua, a malha fica efetivamente aberta e a ação integral pode acumular erro, reforçando a necessidade do anti-windup.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador P}
+
+\figuraensaio{Experimento 2B -- Controlador P com $K_p = $ ? (ensaio 1).}{fig:2b_p_1}
+    {img/2B/P/ensaio1-saida}{img/2B/P/ensaio1-controle}{img/2B/P/ensaio1-erro}{img/2B/P/ensaio1-acoes}
+
+\figuraensaio{Experimento 2B -- Controlador P com $K_p = $ ? (ensaio 2).}{fig:2b_p_2}
+    {img/2B/P/ensaio2-saida}{img/2B/P/ensaio2-controle}{img/2B/P/ensaio2-erro}{img/2B/P/ensaio2-acoes}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador P no Experimento 2B.}
+\label{tab:2b_p}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & \pv & \pv & \pv & \pv & \pv \\ \hline
+2 & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Assim como no tanque 1, a planta da configuração 2 é do tipo 0, e o controlador P mantém um erro em regime que diminui com o aumento de $K_p$. A diferença é que, por se tratar de um sistema de segunda ordem, o aumento do ganho aproxima os polos de malha fechada e, a partir de certo valor, torna-os complexos conjugados: a resposta passa de sobreamortecida a subamortecida, com sobressinal e oscilações crescentes. Há, portanto, um compromisso entre a redução do erro em regime e a degradação do transitório.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Comparar os ensaios: erro em regime, sobressinal e oscilações; comparar com o controlador P do Experimento 2A (o mesmo $K_p$ produz agora uma resposta mais lenta e/ou oscilatória?). Comentar a atuação do intertravamento de $L_1$, se ocorreu.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PI}
+
+\figuraensaio{Experimento 2B -- Controlador PI (ensaio 1).}{fig:2b_pi_1}
+    {img/2B/PI/ensaio1-saida}{img/2B/PI/ensaio1-controle}{img/2B/PI/ensaio1-erro}{img/2B/PI/ensaio1-acoes}
+
+\figuraensaio{Experimento 2B -- Controlador PI (ensaio 2).}{fig:2b_pi_2}
+    {img/2B/PI/ensaio2-saida}{img/2B/PI/ensaio2-controle}{img/2B/PI/ensaio2-erro}{img/2B/PI/ensaio2-acoes}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PI no Experimento 2B.}
+\label{tab:2b_pi}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+2 & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}A ação integral elimina o erro em regime, mas eleva a ordem da malha fechada para três. Como o atraso de fase introduzido pelo integrador se soma ao dos dois tanques, o sistema torna-se mais oscilatório que no Experimento 2A para valores de $K_i$ semelhantes, podendo inclusive ser levado à instabilidade com ganhos elevados. O efeito de \textit{windup} também tende a ser mais pronunciado, pois a dinâmica mais lenta do tanque 2 prolonga os períodos de saturação.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Discutir os ensaios: eliminação do erro, sobressinal, oscilações e influência de $K_i$.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PID}
+
+\figuraensaio{Experimento 2B -- Controlador PID (ensaio 1).}{fig:2b_pid_1}
+    {img/2B/PID/ensaio1-saida}{img/2B/PID/ensaio1-controle}{img/2B/PID/ensaio1-erro}{img/2B/PID/ensaio1-acoes}
+
+\figuraensaio{Experimento 2B -- Controlador PID (ensaio 2).}{fig:2b_pid_2}
+    {img/2B/PID/ensaio2-saida}{img/2B/PID/ensaio2-controle}{img/2B/PID/ensaio2-erro}{img/2B/PID/ensaio2-acoes}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PID no Experimento 2B.}
+\label{tab:2b_pid}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & \pv & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+2 & \pv & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Ao contrário do sistema de primeira ordem, no sistema de segunda ordem a ação derivativa tem um papel relevante: o avanço de fase que ela introduz aumenta o amortecimento da malha fechada, permitindo reduzir o sobressinal e as oscilações provocadas pelas ações proporcional e integral. Ainda assim, o derivador puro amplifica o ruído de medição de $L_2$.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Comparar com o PI: redução de $M_p$ e de $t_s$, nível de ruído na MV.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PID com Filtro na Ação Derivativa}
+
+\figuraensaio{Experimento 2B -- PID com filtro derivativo (ensaio 1).}{fig:2b_pidf_1}
+    {img/2B/PID-F/ensaio1-saida}{img/2B/PID-F/ensaio1-controle}{img/2B/PID-F/ensaio1-erro}{img/2B/PID-F/ensaio1-acoes}
+
+\figuraensaio{Experimento 2B -- PID com filtro derivativo (ensaio 2).}{fig:2b_pidf_2}
+    {img/2B/PID-F/ensaio2-saida}{img/2B/PID-F/ensaio2-controle}{img/2B/PID-F/ensaio2-erro}{img/2B/PID-F/ensaio2-acoes}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PID com filtro derivativo no Experimento 2B.}
+\label{tab:2b_pidf}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\boldsymbol{\tau_f}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & \pv & \pv & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+2 & \pv & \pv & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Discutir a redução do ruído no sinal de controle em relação ao PID sem filtro e o efeito de $\tau_f$ sobre o amortecimento proporcionado pela ação derivativa.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Controlador PID com Filtro \textit{Anti-Reset Windup}}
+
+\figuraensaio{Experimento 2B -- PID com anti-windup (ensaio 1).}{fig:2b_pidaw_1}
+    {img/2B/PID-AW/ensaio1-saida}{img/2B/PID-AW/ensaio1-controle}{img/2B/PID-AW/ensaio1-erro}{img/2B/PID-AW/ensaio1-acoes}
+
+\figuraensaio{Experimento 2B -- PID com anti-windup (ensaio 2).}{fig:2b_pidaw_2}
+    {img/2B/PID-AW/ensaio2-saida}{img/2B/PID-AW/ensaio2-controle}{img/2B/PID-AW/ensaio2-erro}{img/2B/PID-AW/ensaio2-acoes}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho do controlador PID com \textit{anti-reset windup} no Experimento 2B.}
+\label{tab:2b_pidaw}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\mathbf{K_{aw}}$ & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & \pv & \pv & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+2 & \pv & \pv & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Devido à dinâmica mais lenta do tanque 2, os períodos de saturação do sinal de controle são mais longos que no Experimento 2A e, consequentemente, o acúmulo indevido de erro no integrador é maior. Espera-se, portanto, que o \textit{anti-reset windup} tenha um impacto mais expressivo na redução do sobressinal neste experimento. \pendente{Confirmar com os dados e comparar com o PID com filtro.}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Comparativo entre as Leis de Controle}
+\label{sec:2b_comparativo}
+
+\begin{table}[H]
+\centering
+\caption{Comparativo entre as leis de controle no Experimento 2B (melhor ensaio de cada lei).}
+\label{tab:2b_comparativo}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Controlador} & \textbf{Ganhos} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} & \textbf{Ruído na MV} \\ \hline
+P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Comparar as leis de controle e contrastar com o Experimento 2A: no sistema de segunda ordem, a ação derivativa passa a ser útil para amortecer a resposta, e o anti-windup se torna mais importante. Indicar o melhor controlador.}
+\end{justify}
+
+\newpage
+
+%=============================================================
+\subsection{Experimento 2C: Controle em Cascata}
+
+\begin{justify}
+    \hspace{4ex}Nesta seção são apresentados os resultados do controle em cascata do nível do tanque 2. Nas figuras, são exibidos o nível $L_2$ e a referência $r$, o nível $L_1$ e a referência interna $L_{1d}$ calculada pelo controlador mestre, a tensão aplicada à bomba e os erros das duas malhas.
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Comparação entre Malha Simples e Controle em Cascata}
+
+\begin{justify}
+    \hspace{4ex}A Figura~\ref{fig:2c_simples_vs_cascata} compara o melhor resultado obtido com uma única malha (Experimento 2B) com o melhor resultado obtido com o controle em cascata, e a Tabela~\ref{tab:2c_simples_vs_cascata} resume as métricas.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Nível $L_2$]{\grafico{img/2C/comparacao/l2}}\hfill
+    \subfloat[Tensão na bomba $V_P$]{\grafico{img/2C/comparacao/vp}}
+    \caption{Experimento 2C -- Comparação entre malha simples (\pv) e controle em cascata (\pv).}
+    \label{fig:2c_simples_vs_cascata}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Comparação entre malha simples e controle em cascata.}
+\label{tab:2c_simples_vs_cascata}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\textbf{Estratégia} & \textbf{Controlador(es) e ganhos} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+Malha simples & \pv & \pv & \pv & \pv & \pv \\ \hline
+Cascata       & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Na estrutura em cascata, a malha interna controla diretamente o nível do tanque 1, cuja dinâmica é mais rápida, e corrige perturbações nessa etapa do processo antes que elas se propaguem para o tanque 2. Se a malha interna for suficientemente mais rápida que a externa, o controlador mestre passa a enxergar aproximadamente apenas a dinâmica do tanque 2, ou seja, um sistema próximo de primeira ordem, o que facilita a sintonia e permite ganhos mais elevados com menos oscilação. Além disso, a saturação da saída do controlador mestre em \dado{0}--\dado{30}~cm impõe naturalmente o limite de nível do tanque 1, reduzindo a atuação dos intertravamentos.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Discutir com base nos dados: a cascata reduziu o sobressinal e o tempo de acomodação? O sinal de controle ficou mais ou menos agressivo? Houve atuação de intertravamentos em algum dos casos?}
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Combinações de Controladores}
+
+\begin{justify}
+    \hspace{4ex}As Figuras~\ref{fig:2c_p_p} a~\ref{fig:2c_pid_pidaw} apresentam os resultados para cada combinação de controlador mestre (P, PI e PID) com controlador escravo (P, PI, PID, PID com filtro e PID com \textit{anti-reset windup}). As métricas de todas as combinações estão resumidas na Tabela~\ref{tab:2c_combinacoes}.
+\end{justify}
+
+% ---------- Mestre P ----------
+\paragraph{Mestre P.}
+
+\figuracascata{Experimento 2C -- Mestre P e escravo P.}{fig:2c_p_p}
+    {img/2C/P-P/ensaio1-l2}{img/2C/P-P/ensaio1-l1}{img/2C/P-P/ensaio1-vp}{img/2C/P-P/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre P e escravo PI.}{fig:2c_p_pi}
+    {img/2C/P-PI/ensaio1-l2}{img/2C/P-PI/ensaio1-l1}{img/2C/P-PI/ensaio1-vp}{img/2C/P-PI/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre P e escravo PID.}{fig:2c_p_pid}
+    {img/2C/P-PID/ensaio1-l2}{img/2C/P-PID/ensaio1-l1}{img/2C/P-PID/ensaio1-vp}{img/2C/P-PID/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre P e escravo PID com filtro derivativo.}{fig:2c_p_pidf}
+    {img/2C/P-PID-F/ensaio1-l2}{img/2C/P-PID-F/ensaio1-l1}{img/2C/P-PID-F/ensaio1-vp}{img/2C/P-PID-F/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre P e escravo PID com anti-windup.}{fig:2c_p_pidaw}
+    {img/2C/P-PID-AW/ensaio1-l2}{img/2C/P-PID-AW/ensaio1-l1}{img/2C/P-PID-AW/ensaio1-vp}{img/2C/P-PID-AW/ensaio1-erros}
+
+\begin{justify}
+    \hspace{4ex}Com o mestre proporcional, a malha externa não possui ação integral e, portanto, espera-se erro em regime não nulo em $L_2$, independentemente do controlador escravo: o escravo pode fazer $L_1$ seguir $L_{1d}$ com precisão, mas o próprio $L_{1d}$ só é diferente de zero se houver erro em $L_2$. \pendente{Confirmar com os dados e comparar o efeito dos diferentes escravos sobre a rapidez da malha interna e sobre o ruído em $V_P$.}
+\end{justify}
+
+% ---------- Mestre PI ----------
+\paragraph{Mestre PI.}
+
+\figuracascata{Experimento 2C -- Mestre PI e escravo P.}{fig:2c_pi_p}
+    {img/2C/PI-P/ensaio1-l2}{img/2C/PI-P/ensaio1-l1}{img/2C/PI-P/ensaio1-vp}{img/2C/PI-P/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PI e escravo PI.}{fig:2c_pi_pi}
+    {img/2C/PI-PI/ensaio1-l2}{img/2C/PI-PI/ensaio1-l1}{img/2C/PI-PI/ensaio1-vp}{img/2C/PI-PI/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PI e escravo PID.}{fig:2c_pi_pid}
+    {img/2C/PI-PID/ensaio1-l2}{img/2C/PI-PID/ensaio1-l1}{img/2C/PI-PID/ensaio1-vp}{img/2C/PI-PID/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PI e escravo PID com filtro derivativo.}{fig:2c_pi_pidf}
+    {img/2C/PI-PID-F/ensaio1-l2}{img/2C/PI-PID-F/ensaio1-l1}{img/2C/PI-PID-F/ensaio1-vp}{img/2C/PI-PID-F/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PI e escravo PID com anti-windup.}{fig:2c_pi_pidaw}
+    {img/2C/PI-PID-AW/ensaio1-l2}{img/2C/PI-PID-AW/ensaio1-l1}{img/2C/PI-PID-AW/ensaio1-vp}{img/2C/PI-PID-AW/ensaio1-erros}
+
+\begin{justify}
+    \hspace{4ex}Com ação integral na malha mestre, o erro em regime de $L_2$ tende a zero. Nesse caso, mesmo um escravo apenas proporcional pode ser suficiente: o erro em regime da malha interna ($L_1 \neq L_{1d}$) é compensado pelo integrador do mestre, que ajusta $L_{1d}$ até que $L_2 = r$. \pendente{Verificar se o escravo P já fornece bom desempenho e se a ação integral no escravo trouxe benefício ou apenas mais oscilação. Comentar o windup do mestre quando $L_{1d}$ satura.}
+\end{justify}
+
+% ---------- Mestre PID ----------
+\paragraph{Mestre PID.}
+
+\figuracascata{Experimento 2C -- Mestre PID e escravo P.}{fig:2c_pid_p}
+    {img/2C/PID-P/ensaio1-l2}{img/2C/PID-P/ensaio1-l1}{img/2C/PID-P/ensaio1-vp}{img/2C/PID-P/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PID e escravo PI.}{fig:2c_pid_pi}
+    {img/2C/PID-PI/ensaio1-l2}{img/2C/PID-PI/ensaio1-l1}{img/2C/PID-PI/ensaio1-vp}{img/2C/PID-PI/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PID e escravo PID.}{fig:2c_pid_pid}
+    {img/2C/PID-PID/ensaio1-l2}{img/2C/PID-PID/ensaio1-l1}{img/2C/PID-PID/ensaio1-vp}{img/2C/PID-PID/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PID e escravo PID com filtro derivativo.}{fig:2c_pid_pidf}
+    {img/2C/PID-PID-F/ensaio1-l2}{img/2C/PID-PID-F/ensaio1-l1}{img/2C/PID-PID-F/ensaio1-vp}{img/2C/PID-PID-F/ensaio1-erros}
+\figuracascata{Experimento 2C -- Mestre PID e escravo PID com anti-windup.}{fig:2c_pid_pidaw}
+    {img/2C/PID-PID-AW/ensaio1-l2}{img/2C/PID-PID-AW/ensaio1-l1}{img/2C/PID-PID-AW/ensaio1-vp}{img/2C/PID-PID-AW/ensaio1-erros}
+
+\begin{justify}
+    \hspace{4ex}A ação derivativa no mestre atua sobre a variação de $L_2$ e pode antecipar a correção de $L_{1d}$, reduzindo o sobressinal. Como a saída do mestre é uma referência de nível, e não diretamente a tensão na bomba, o ruído amplificado pela derivada é parcialmente atenuado pela dinâmica da malha interna. \pendente{Discutir com base nos dados, em especial a combinação com o escravo PID com derivada sem filtro, em que o ruído é derivado duas vezes em cascata.}
+\end{justify}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de desempenho das combinações de controladores no controle em cascata.}
+\label{tab:2c_combinacoes}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Mestre} & \textbf{Escravo} & \textbf{Ganhos mestre} & \textbf{Ganhos escravo} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+P   & P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+P   & PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+P   & PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+P   & PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+P   & PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PI  & P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PI  & PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PI  & PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PI  & PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PI  & PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID & P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID & PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID & PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID & PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+PID & PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+%-------------------------------------------------------------
+\subsubsection{Influência dos Ganhos}
+
+\begin{justify}
+    \hspace{4ex}Para avaliar a sensibilidade da estratégia em cascata à sintonia, a combinação \dado{mestre ? / escravo ?} foi ensaiada com diferentes valores de ganhos, conforme a Tabela~\ref{tab:2c_ganhos} e as Figuras~\ref{fig:2c_ganhos_1} e~\ref{fig:2c_ganhos_2}. \pendente{Repetir este bloco para outras combinações, se necessário.}
+\end{justify}
+
+\figuracascata{Experimento 2C -- Variação de ganhos (ensaio 1).}{fig:2c_ganhos_1}
+    {img/2C/ganhos/ensaio1-l2}{img/2C/ganhos/ensaio1-l1}{img/2C/ganhos/ensaio1-vp}{img/2C/ganhos/ensaio1-erros}
+
+\figuracascata{Experimento 2C -- Variação de ganhos (ensaio 2).}{fig:2c_ganhos_2}
+    {img/2C/ganhos/ensaio2-l2}{img/2C/ganhos/ensaio2-l1}{img/2C/ganhos/ensaio2-vp}{img/2C/ganhos/ensaio2-erros}
+
+\begin{table}[H]
+\centering
+\caption{Influência dos ganhos no controle em cascata.}
+\label{tab:2c_ganhos}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Ensaio} & \textbf{Ganhos mestre} & \textbf{Ganhos escravo} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+1 & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+2 & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Na sintonia de uma cascata, a malha interna deve ser ajustada primeiro e de forma a ser significativamente mais rápida que a externa. Se o mestre for sintonizado de forma agressiva em relação ao escravo, as duas dinâmicas se sobrepõem e o sistema tende a oscilar. \pendente{Discutir os ensaios à luz dessa regra: o que ocorreu ao aumentar os ganhos do escravo? E os do mestre?}
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Fechar a seção indicando a melhor combinação de controladores e ganhos, justificando com a Tabela~\ref{tab:2c_combinacoes}.}
 \end{justify}
 
 \newpage
