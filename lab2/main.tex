@@ -409,13 +409,13 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \subsection{Aparato Experimental}
 
 \begin{justify}
-    \hspace{4ex}Os experimentos foram conduzidos na bancada do sistema de tanques acoplados da Quanser\textsuperscript{\textregistered}, integrada a um microcomputador com Windows e os softwares MATLAB\textsuperscript{\textregistered}/SIMULINK\textsuperscript{\textregistered} e QUARC\textsuperscript{\textregistered}. A comunicação entre a planta e o computador foi realizada por meio da placa de aquisição de dados Q8-USB e do módulo de potência VoltPAQ-X1, que amplifica a tensão enviada pelo \textit{software} por um ganho de 3 antes de aplicá-la à bomba. Os níveis dos tanques foram obtidos a partir da tensão dos sensores de pressão, convertida em centímetros pela curva de calibração obtida na primeira unidade ($6{,}25$~cm/V). Em todos os ensaios utilizou-se o orifício de saída \dado{médio} em ambos os tanques.
+    \hspace{4ex}Os experimentos foram conduzidos na bancada do sistema de tanques acoplados da Quanser\textsuperscript{\textregistered}, integrada a um microcomputador com Windows e os softwares MATLAB\textsuperscript{\textregistered}/SIMULINK\textsuperscript{\textregistered} e QUARC\textsuperscript{\textregistered}. A comunicação entre a planta e o computador foi realizada por meio da placa de aquisição de dados Q8-USB e do módulo de potência VoltPAQ-X1, que amplifica a tensão enviada pelo \textit{software} por um ganho de 3 antes de aplicá-la à bomba. Os níveis dos tanques foram obtidos a partir da tensão dos sensores de pressão, convertida em centímetros pela curva de calibração obtida na primeira unidade ($6{,}25$~cm/V).
 \end{justify}
 
 \subsection{Implementação do Controlador PID}
 
 \begin{justify}
-    \hspace{4ex}O controlador foi implementado na forma paralela utilizando apenas blocos básicos do SIMULINK\textsuperscript{\textregistered} (ganhos, somadores, integrador e derivador), sem o uso de blocos PID prontos. Na forma paralela, o sinal de controle é dado pela Equação~\eqref{eq:pid_paralelo}, em que $e(t) = r(t) - y(t)$ é o erro entre a referência (SP) e o nível medido (PV).
+    \hspace{4ex}O controlador foi implementado na forma paralela utilizando apenas blocos básicos do SIMULINK\textsuperscript{\textregistered} (ganhos, somadores, integrador e derivador), sem o uso de blocos PID prontos. Na forma paralela, o sinal de controle é dado pela Equação~\eqref{eq:pid_paralelo}, em que $e(t) = r(t) - y(t)$ é o erro entre a referência (SP) e o nível medido (PV). Para cada lei de controle (P, PI, PD, PID, PID com filtro derivativo e PID com \textit{anti-reset windup}), foram realizados ensaios com pelo menos dois conjuntos de ganhos, registrando-se o nível, o sinal de controle, o erro e a contribuição de cada ação de controle. Para fins de praticidade e fluidez de leitura, não serão mostrados todos os dados salvos em todos os experimentos, serão discutidos obrigatoriamente todas as saídas, mas gráficos de erros e ações de controle serão omitidos na maioria das vezes.
 \end{justify}
 
 \begin{equation}
@@ -437,7 +437,7 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \end{equation}
 
 \begin{justify}
-    \hspace{4ex}O filtro \textit{anti-reset windup} foi implementado pelo método de \textit{back-calculation} (\pendente{confirmar}): a diferença entre o sinal de controle saturado ($u_{sat}$) e o não saturado ($u$) é multiplicada por um ganho $K_{aw}$ e realimentada na entrada do integrador, de acordo com a Equação~\eqref{eq:antiwindup}. Assim, enquanto o atuador está saturado, o integrador é descarregado e deixa de acumular erro.
+    \hspace{4ex}O filtro \textit{anti-reset windup} foi implementado pelo método de \textit{back-calculation}: a diferença entre o sinal de controle saturado ($u_{sat}$) e o não saturado ($u$) é multiplicada por um ganho $K_{aw}$ e realimentada na entrada do integrador, de acordo com a Equação~\eqref{eq:antiwindup}. Assim, enquanto o atuador está saturado, o integrador é descarregado e deixa de acumular erro.
 \end{justify}
 
 \begin{equation}
@@ -448,13 +448,20 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \subsection{Experimento 2A: Controle do Nível do Tanque 1}
 
 \begin{justify}
-    \hspace{4ex}No Experimento 2A, o sistema foi utilizado na configuração 1, em que a bomba alimenta o tanque 1 e a variável controlada é o nível $L_1$. Nessa configuração, o processo se comporta como um sistema de primeira ordem. Como referência, aplicou-se \dado{descrever o sinal de referência: degraus de ? cm para ? cm, onda quadrada de período ? s etc.}, com duração total de \dado{?}~s por ensaio. Para cada lei de controle (P, PI, PD, PID, PID com filtro derivativo e PID com \textit{anti-reset windup}), foram realizados ensaios com pelo menos dois conjuntos de ganhos, registrando-se o nível, o sinal de controle, o erro e a contribuição de cada ação de controle.
+    \hspace{4ex}No Experimento 2A, o sistema foi utilizado na configuração 1, em que a bomba alimenta o tanque 1 e a variável controlada é o nível $L_1$. Nessa configuração, o processo se comporta como um sistema de primeira ordem. Como referência, utilizou-se o valor de $15~cm$ para este experimento e os demais presentes neste relatório. A duração de todos os ensaios feitos neste experimento é de 40s, no intuito de ser possivel a visualização completa da convergência do sinal controlado à referência. O sistema projetado no SIMULINK pode ser visualizado na Figura ~\ref{fig:2a}
 \end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/simulink/2a}
+    \caption{Sistema PID implementado no SIMULINK para o experimento 2A.}
+    \label{fig:2a}
+\end{figure}
 
 \subsection{Experimento 2B: Controle do Nível do Tanque 2}
 
 \begin{justify}
-    \hspace{4ex}No Experimento 2B, o sistema foi utilizado na configuração 2, em que a bomba alimenta o tanque 1, cuja vazão de saída alimenta o tanque 2. A variável controlada passa a ser o nível $L_2$, e o processo se comporta como um sistema de segunda ordem formado por dois sistemas de primeira ordem em série. A referência aplicada foi \dado{descrever}. O mesmo procedimento incremental do Experimento 2A foi seguido para as leis de controle P, PI, PID, PID com filtro derivativo e PID com \textit{anti-reset windup}.
+    \hspace{4ex}No Experimento 2B, o sistema foi utilizado na configuração 2, em que a bomba alimenta o tanque 1, cuja vazão de saída alimenta o tanque 2. A variável controlada passa a ser o nível $L_2$, e o processo se comporta como um sistema de segunda ordem formado por dois sistemas de primeira ordem em série. O mesmo procedimento incremental do Experimento 2A foi seguido para as leis de controle P, PI, PID, PID com filtro derivativo e PID com \textit{anti-reset windup}.
 \end{justify}
 
 \subsubsection{Sistema de Intertravamentos}
