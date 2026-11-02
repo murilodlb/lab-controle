@@ -448,14 +448,36 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \subsection{Experimento 2A: Controle do Nível do Tanque 1}
 
 \begin{justify}
-    \hspace{4ex}No Experimento 2A, o sistema foi utilizado na configuração 1, em que a bomba alimenta o tanque 1 e a variável controlada é o nível $L_1$. Nessa configuração, o processo se comporta como um sistema de primeira ordem. Como referência, utilizou-se o valor de $15~cm$ para este experimento e os demais presentes neste relatório. A duração de todos os ensaios feitos neste experimento é de 40s, no intuito de ser possivel a visualização completa da convergência do sinal controlado à referência. O sistema projetado no SIMULINK pode ser visualizado na Figura ~\ref{fig:2a}
+    \hspace{4ex}No Experimento 2A, o sistema foi utilizado na configuração 1, em que a bomba alimenta o tanque 1 e a variável controlada é o nível $L_1$. Nessa configuração, o processo se comporta como um sistema de primeira ordem. Como referência, utilizou-se o valor de $15~cm$ para este experimento e os demais presentes neste relatório. A duração de todos os ensaios feitos neste experimento é de 40s, no intuito de ser possível a visualização completa da convergência do sinal controlado à referência. O sistema projetado no SIMULINK pode ser visualizado na Figura ~\ref{fig:2a-pid}
 \end{justify}
 
 \begin{figure}[H]
     \centering
-    \grafico[0.9\textwidth]{img/simulink/2a}
+    \grafico[0.9\textwidth]{img/2a-pid}
     \caption{Sistema PID implementado no SIMULINK para o experimento 2A.}
-    \label{fig:2a}
+    \label{fig:2a-pid}
+\end{figure}
+
+\begin{justify}
+    \hspace{4ex}Para a implementação do filtro derivativo, foi feita a adição de um integrador no ramo derivativo junto com outro ganho que representa o multiplicador do filtro, assim como pode ser visualizado na Figura~\ref{fig:2a-pidf}
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/2a-pid}
+    \caption{Sistema PID com filtro derivativo implementado no SIMULINK para o experimento 2A.}
+    \label{fig:2a-pidf}
+\end{figure}
+
+\begin{justify}
+    \hspace{4ex}Para o \textit{anti-windup} o procedimento se assemelha ao realizado no filtro derivativo, mas desta vez no ganho integrativo, com a adição de uma soma e de outro ganho. O sistema implementado no SIMULINK pode ser visualizado na Figura~\ref{fig:2a-pidaw}
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/2a-pid}
+    \caption{Sistema PID com filtro \textit{anti-reset windup} no SIMULINK para o experimento 2A.}
+    \label{fig:2a-pidaw}
 \end{figure}
 
 \subsection{Experimento 2B: Controle do Nível do Tanque 2}
@@ -617,7 +639,7 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
     {img/2a/PID-F/p2-i008-d005-f01-saida.pdf}
 
 \begin{justify}
-    \hspace{4ex}Semelhantemente ao resultado da Figura~\ref{fig:2a_pid_1}, o resultado da Figura~\ref{2a_pidf_2} demonstra um sobressinal nulo, tempo de acomodação baixo e tempo de subida aceitável, mesmo com pouca diferença em relação ao ruído, tendo em vista que o sinal de controle no PID sem filtro não apresentou ruído de regime alto o suficiente para ser necessário um filtro na ação derivativa, o resultado com o filtro é bastante semelhante na plotagem do sinal de controle.
+    \hspace{4ex}Semelhantemente ao resultado da Figura~\ref{fig:2a_pid_1}, o resultado da Figura~\ref{fig:2a_pidf_2} demonstra um sobressinal nulo, tempo de acomodação baixo e tempo de subida aceitável, mesmo com pouca diferença em relação ao ruído, tendo em vista que o sinal de controle no PID sem filtro não apresentou ruído de regime alto o suficiente para ser necessário um filtro na ação derivativa, o resultado com o filtro é bastante semelhante na plotagem do sinal de controle.
 \end{justify}
   
 \figurasaida{Experimento 2A - PID com filtro derivativo ($K_p = 2$, $K_i = 0{,}03$, $K_d = 0{,}13$ e $\tau_f = 0{,}05$).}{fig:2a_pidf_2}% faz o L
@@ -642,7 +664,7 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \end{justify}
 
 \figurasaida{Experimento 2A - PID com \textit{anti-windup} com ação excessiva de descarga.}{fig:2a_pidaw_2}%
-    {img/2a/PID-AW/p2-i0005-d01-aw01-saida-2.pdf}
+    {img/2a/PID-AW/p2-i005-d01-aw01-saida.pdf}
 
 %-------------------------------------------------------------
 \subsubsection{Discussão Comparativa do Experimento 2A}
