@@ -512,11 +512,21 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
 \subsection{Experimento 2C: Controle em Cascata}
 
 \begin{justify}
-    \hspace{4ex}No Experimento 2C, mantida a configuração 2, adotou-se a estratégia de controle em cascata. A malha externa (mestre) recebe o erro $e_x = r - L_2$ e calcula o nível desejado para o tanque 1, $L_{1d}$. A malha interna (escrava) recebe o erro $e_i = L_{1d} - L_1$ e calcula a tensão $V_P$ aplicada à bomba. A saída do controlador mestre foi limitada à faixa de \dado{0} a \dado{30}~cm, de forma que a referência interna respeite os limites operacionais do tanque 1. Os intertravamentos do Experimento 2B foram mantidos. O diagrama implementado é apresentado na Figura~\ref{fig:simulink_cascata}.
+    \hspace{4ex}No Experimento 2C, mantida a configuração 2 do Experimento 2B, adotou-se a estratégia de controle em cascata descrita no roteiro. A malha externa (mestre) recebe o erro $e_x = r - L_2$ e calcula o nível desejado para o tanque 1, $L_{1d}$. A malha interna (escrava) recebe o erro $e_i = L_{1d} - L_1$ e calcula a tensão $V_P$ aplicada à bomba. Dessa forma, o controlador mestre não atua diretamente sobre a bomba: sua saída é uma referência de nível, e o controlador escravo é o responsável por converter essa referência em tensão. As duas leis de controle são dadas pelas Equações~\eqref{eq:cascata_mestre} e~\eqref{eq:cascata_escravo}, em que $C_M(s)$ e $C_E(s)$ assumem, conforme o ensaio, as formas P, PI, PID, PID com filtro derivativo ou PID com \textit{anti-reset windup} apresentadas anteriormente.
 \end{justify}
 
+\begin{equation}
+    L_{1d}(s) = C_M(s)\,\left[R(s) - L_2(s)\right]
+    \label{eq:cascata_mestre}
+\end{equation}
+
+\begin{equation}
+    V_P(s) = C_E(s)\,\left[L_{1d}(s) - L_1(s)\right]
+    \label{eq:cascata_escravo}
+\end{equation}
+
 \begin{justify}
-    \hspace{4ex}Foram testadas as combinações de controladores P, PI e PID na malha mestre com controladores P, PI, PID, PID com filtro derivativo e PID com \textit{anti-reset windup} na malha escrava, e, para cada combinação, diferentes valores de ganhos. Os resultados também foram comparados aos obtidos com uma única malha de controle no Experimento 2B.
+    \hspace{4ex}Os controladores mestre e escravo foram construídos com os mesmos blocos básicos utilizados nos Experimentos 2A e 2B (ganhos, somadores, integradores e derivadores), com o filtro derivativo e o \textit{anti-reset windup} implementados conforme as Equações~\eqref{eq:filtro_derivativo} e~\eqref{eq:antiwindup}. A saída do controlador escravo continua limitada a $\pm 4$~V, e a saída do controlador mestre foi limitada à faixa de \dado{0} a \dado{30}~cm, de forma que a referência interna respeite os limites operacionais do tanque 1. Os intertravamentos do Experimento 2B foram mantidos. O diagrama implementado é apresentado na Figura~\ref{fig:simulink_cascata}.
 \end{justify}
 
 \begin{figure}[H]
@@ -525,6 +535,49 @@ Professor:  Fábio Meneghetti Ugulino de Araújo.
     \caption{Diagrama de blocos do controle em cascata implementado no SIMULINK.}
     \label{fig:simulink_cascata}
 \end{figure}
+
+\begin{justify}
+    \hspace{4ex}Foram ensaiadas 18 combinações de controladores. Na malha mestre utilizaram-se os controladores P, PI e PID solicitados no roteiro e, adicionalmente, o PID com filtro derivativo (PIDF). Na malha escrava utilizaram-se os controladores P, PI, PID e PID com filtro derivativo para todos os mestres, e o PID com \textit{anti-reset windup} (PIDAW) para os mestres PID e PIDF. Ao longo do texto, as combinações são identificadas no formato \textit{mestre}/\textit{escravo}; por exemplo, PI/P indica controlador PI na malha mestre e controlador P na malha escrava. Os ganhos finais adotados em cada combinação, ajustados empiricamente, estão listados na Tabela~\ref{tab:2c_ganhos_metodologia}.
+\end{justify}
+
+\begin{table}[H]
+\centering
+\caption{Ganhos utilizados em cada combinação de controladores no Experimento 2C.}
+\label{tab:2c_ganhos_metodologia}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\multicolumn{2}{|c|}{\textbf{Combinação}} & \multicolumn{4}{c|}{\textbf{Mestre}} & \multicolumn{5}{c|}{\textbf{Escravo}} \\ \hline
+\textbf{Mestre} & \textbf{Escravo} & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\boldsymbol{\tau_f}$ & $\mathbf{K_p}$ & $\mathbf{K_i}$ & $\mathbf{K_d}$ & $\boldsymbol{\tau_f}$ & $\mathbf{K_{aw}}$ \\ \hline
+P    & P     & 5   & --   & --   & --    & 5    & --    & --   & --    & -- \\ \hline
+P    & PI    & 4   & --   & --   & --    & 5    & 0,2   & --   & --    & -- \\ \hline
+P    & PID   & 5   & --   & --   & --    & 3,8  & 0,175 & 0,1  & --    & -- \\ \hline
+P    & PIDF  & 5   & --   & --   & --    & 3,5  & 0,2   & 0,01 & 0,005 & -- \\ \hline
+PI   & P     & 4,5 & 0,09 & --   & --    & 2,75 & --    & --   & --    & -- \\ \hline
+PI   & PI    & 4   & 0,07 & --   & --    & 3    & 0,03  & --   & --    & -- \\ \hline
+PI   & PID   & 4   & 0,07 & --   & --    & 3    & 0,03  & 0,01 & --    & -- \\ \hline
+PI   & PIDF  & 4   & 0,07 & --   & --    & 2,75 & 0,03  & 0,01 & 0,005 & -- \\ \hline
+PID  & P     & 4,2 & 0,1  & 0,05 & --    & 2,75 & --    & --   & --    & -- \\ \hline
+PID  & PI    & 4   & 0,07 & 0,05 & --    & 3    & 0,03  & --   & --    & -- \\ \hline
+PID  & PID   & 4   & 0,07 & 0,05 & --    & 3    & 0,03  & 0,01 & --    & -- \\ \hline
+PID  & PIDF  & 4   & 0,07 & 0,05 & --    & 2,75 & 0,03  & 0,01 & 0,005 & -- \\ \hline
+PID  & PIDAW & 4   & 0,07 & 0,05 & --    & 2,75 & 0,03  & 0,01 & 0,005 & \dado{?} \\ \hline
+PIDF & P     & 4   & 0,1  & 0,01 & 0,005 & 2,5  & --    & --   & --    & -- \\ \hline
+PIDF & PI    & 4   & 0,07 & 0,01 & 0,005 & 3    & 0,03  & --   & --    & -- \\ \hline
+PIDF & PID   & 4   & 0,07 & 0,05 & 0,005 & 3    & 0,03  & 0,01 & --    & -- \\ \hline
+PIDF & PIDF  & 4   & 0,07 & 0,05 & 0,005 & 2,75 & 0,03  & 0,01 & 0,005 & -- \\ \hline
+PIDF & PIDAW & 4   & 0,07 & 0,05 & 0,005 & 3    & 0,05  & 0,01 & --    & 0,01 \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\begin{justify}
+    \hspace{4ex}Em todos os ensaios, aplicou-se um degrau de referência de $r = 15$~cm para o nível do tanque 2, partindo de níveis iniciais baixos (entre 1 e 6~cm em $L_2$), e registraram-se, durante 120~s, o nível $L_1$, o nível $L_2$ e a referência $r$. A duração maior que a dos experimentos anteriores foi escolhida para permitir observar a acomodação completa de $L_2$, cuja dinâmica é mais lenta que a de $L_1$. Os resultados foram também comparados com os obtidos com uma única malha de controle no Experimento 2B.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Como os gráficos do Experimento 2C foram exportados como imagens do \textit{Scope} do SIMULINK, as métricas de desempenho foram obtidas digitalizando-se as curvas de $L_1$ e $L_2$ a partir da cor de cada traço, com a escala dos eixos determinada pelas linhas de grade. A resolução resultante é de aproximadamente $0{,}1$~cm em nível e $0{,}3$~s em tempo, de modo que erros em regime inferiores a cerca de $0{,}2$~cm foram considerados nulos. O tempo de acomodação foi calculado com critério de 2\% em torno do valor final de $L_2$, e o tempo de subida, entre 10\% e 90\% da variação de $L_2$.
+\end{justify}
 
 \subsection{Métricas de Desempenho}
 
@@ -897,21 +950,29 @@ PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
 \subsection{Experimento 2C: Controle em Cascata}
 
 \begin{justify}
-    \hspace{4ex}Nesta seção são apresentados os resultados do controle em cascata do nível do tanque 2. Nas figuras, são exibidos o nível $L_2$ e a referência $r$, o nível $L_1$ e a referência interna $L_{1d}$ calculada pelo controlador mestre, a tensão aplicada à bomba e os erros das duas malhas.
+    \hspace{4ex}Nesta seção são apresentados os resultados do controle em cascata do nível do tanque 2. Em todas as figuras, a curva verde corresponde ao nível do tanque 1 ($L_1$), a curva vermelha ao nível do tanque 2 ($L_2$) e a linha horizontal em 15~cm à referência $r$. As métricas de todas as combinações, obtidas conforme descrito na metodologia, estão reunidas na Tabela~\ref{tab:2c_combinacoes}, e os ganhos correspondentes, na Tabela~\ref{tab:2c_ganhos_metodologia}.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Antes da análise individual, cabe destacar duas observações comuns a todos os ensaios. A primeira é que, no início de todos eles, $L_1$ cresce segundo uma rampa praticamente idêntica, o que indica que a bomba permanece saturada em $4$~V durante os primeiros 15 a 20~s, independentemente da combinação e dos ganhos. Assim, o tempo de subida de $L_2$ é limitado principalmente pela capacidade do atuador, e não pela sintonia, o que explica os valores semelhantes de $t_r$ (entre 14 e 18~s) na Tabela~\ref{tab:2c_combinacoes}. A segunda é que a bomba só consegue adicionar água ao tanque 2 indiretamente, via tanque 1, e nunca retirá-la: quando $L_2$ ultrapassa o valor final, o excesso só é eliminado pela vazão natural de saída do tanque 2, que é lenta. Por isso, qualquer sobressinal em $L_2$, mesmo pequeno, prolonga bastante o tempo de acomodação.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Os ensaios foram realizados em duas condições iniciais distintas. Nas combinações sem filtro derivativo nem \textit{anti-windup}, o tanque 2 partia de cerca de 3~cm e, em regime, $L_1 \approx L_2$. Nas combinações que envolvem PIDF ou PIDAW (P/PIDF, PI/PIDF, PID/PIDF, PID/PIDAW e todas com mestre PIDF), o tanque 2 partia de cerca de 1,3~cm e, em regime, $L_1$ estabilizou em torno de 16,2~cm para $L_2 = 15$~cm. Como, em regime, as vazões de saída dos dois tanques se igualam, a relação entre $L_1$ e $L_2$ depende apenas dos orifícios de saída; a mudança dessa relação indica que esses ensaios foram feitos em uma condição diferente da planta \pendente{confirmar: sessão/dia diferente, troca de orifício ou recalibração dos sensores}. Essa diferença deve ser levada em conta ao comparar os dois grupos.
 \end{justify}
 
 %-------------------------------------------------------------
 \subsubsection{Comparação entre Malha Simples e Controle em Cascata}
 
 \begin{justify}
-    \hspace{4ex}A Figura~\ref{fig:2c_simples_vs_cascata} compara o melhor resultado obtido com uma única malha (Experimento 2B) com o melhor resultado obtido com o controle em cascata, e a Tabela~\ref{tab:2c_simples_vs_cascata} resume as métricas.
+    \hspace{4ex}A Figura~\ref{fig:2c_simples_vs_cascata} compara um resultado típico do controle com malha única do Experimento 2B (PID com $K_p = 3$, $K_i = 0{,}05$ e $K_d = 0{,}2$) com a combinação PID/PID em cascata. A Tabela~\ref{tab:2c_simples_vs_cascata} resume as métricas, incluindo também o PID com \textit{anti-windup} do Experimento 2B.
 \end{justify}
 
 \begin{figure}[H]
     \centering
-    \subfloat[Nível $L_2$]{\grafico{img/2C/comparacao/l2}}\hfill
-    \subfloat[Tensão na bomba $V_P$]{\grafico{img/2C/comparacao/vp}}
-    \caption{Experimento 2C -- Comparação entre malha simples (\pv) e controle em cascata (\pv).}
+    \subfloat[Malha simples -- PID]{\grafico{img/2b/PID/saida_p3_ki0.05_kd_0.2.pdf}}\hfill
+    \subfloat[Cascata -- mestre PID, escravo PID]{\grafico{img/2c/PID_PID/output.pdf}}
+    \caption{Experimento 2C -- Comparação entre malha simples (Experimento 2B) e controle em cascata.}
     \label{fig:2c_simples_vs_cascata}
 \end{figure}
 
@@ -920,144 +981,189 @@ PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
 \caption{Comparação entre malha simples e controle em cascata.}
 \label{tab:2c_simples_vs_cascata}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|}
 \hline
-\textbf{Estratégia} & \textbf{Controlador(es) e ganhos} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
-Malha simples & \pv & \pv & \pv & \pv & \pv \\ \hline
-Cascata       & \pv & \pv & \pv & \pv & \pv \\ \hline
+\textbf{Estratégia} & \textbf{Controlador(es) e ganhos} & $\mathbf{L_{1,max}}$ \textbf{(cm)} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
+Malha simples & PID ($K_p = 3$, $K_i = 0{,}05$, $K_d = 0{,}2$) & 28,1 & 21 & 19 & $>120$ & oscila \\ \hline
+Malha simples & PID-AW ($K_p = 3{,}5$, $K_i = 0{,}01$, $K_d = 0{,}8$, $K_{aw} = 0{,}005$) & 28,1 & 3 & 17 & $>120$ & oscila \\ \hline
+Cascata & PID/PID (Tabela~\ref{tab:2c_ganhos_metodologia}) & 26,1 & $\approx 0$ & 16 & 26 & $\approx 0$ \\ \hline
 \end{tabular}%
 }
 \end{table}
 
 \begin{justify}
-    \hspace{4ex}Na estrutura em cascata, a malha interna controla diretamente o nível do tanque 1, cuja dinâmica é mais rápida, e corrige perturbações nessa etapa do processo antes que elas se propaguem para o tanque 2. Se a malha interna for suficientemente mais rápida que a externa, o controlador mestre passa a enxergar aproximadamente apenas a dinâmica do tanque 2, ou seja, um sistema próximo de primeira ordem, o que facilita a sintonia e permite ganhos mais elevados com menos oscilação. Além disso, a saturação da saída do controlador mestre em \dado{0}--\dado{30}~cm impõe naturalmente o limite de nível do tanque 1, reduzindo a atuação dos intertravamentos.
+    \hspace{4ex}A diferença entre as duas estratégias é evidente. Com uma única malha, o controlador enxerga a planta de segunda ordem completa e precisa de ganhos elevados para acelerar a resposta; com isso, $L_1$ sobe até o limite do intertravamento (cerca de 28~cm), onde permanece oscilando entre aproximadamente 20 e 32~s, e $L_2$ atinge 18,2~cm, um sobressinal de cerca de 21\%. Em seguida, os dois níveis passam a oscilar: $L_1$ varia entre cerca de 12 e 23~cm, e $L_2$ ainda não está acomodado ao final dos 120~s de ensaio. Mesmo com \textit{anti-windup}, que reduz o sobressinal para cerca de 3\%, a oscilação de $L_1$ persiste e $L_2$ não se estabiliza dentro do ensaio.
 \end{justify}
 
 \begin{justify}
-    \hspace{4ex}\pendente{Discutir com base nos dados: a cascata reduziu o sobressinal e o tempo de acomodação? O sinal de controle ficou mais ou menos agressivo? Houve atuação de intertravamentos em algum dos casos?}
+    \hspace{4ex}Com a cascata, por outro lado, $L_1$ sobe até cerca de 26~cm, sem tocar o intertravamento, e desce de forma suave e sem oscilações até o valor de regime; $L_2$ converge para a referência sem sobressinal mensurável e acomoda em cerca de 26~s, praticamente no tempo mínimo imposto pela saturação da bomba. Isso ocorre porque a malha interna controla diretamente o nível do tanque 1, cuja dinâmica é mais rápida, e corrige os desvios de $L_1$ antes que eles se propaguem para o tanque 2. Como a malha interna é suficientemente mais rápida que a externa, o controlador mestre enxerga aproximadamente apenas a dinâmica do tanque 2, um sistema próximo de primeira ordem, o que facilita a sintonia e elimina as oscilações observadas com a malha simples. Além disso, como o mestre comanda uma referência de nível, e não uma tensão, a limitação de sua saída impõe naturalmente um teto para $L_1$, reduzindo a necessidade de atuação dos intertravamentos.
 \end{justify}
 
 %-------------------------------------------------------------
 \subsubsection{Combinações de Controladores}
 
 \begin{justify}
-    \hspace{4ex}As Figuras~\ref{fig:2c_p_p} a~\ref{fig:2c_pid_pidaw} apresentam os resultados para cada combinação de controlador mestre (P, PI e PID) com controlador escravo (P, PI, PID, PID com filtro e PID com \textit{anti-reset windup}). As métricas de todas as combinações estão resumidas na Tabela~\ref{tab:2c_combinacoes}.
+    \hspace{4ex}As Figuras~\ref{fig:2c_mestre_p} a~\ref{fig:2c_mestre_pidf} apresentam os resultados agrupados pelo controlador da malha mestre, e a Tabela~\ref{tab:2c_combinacoes} resume as métricas de todas as combinações.
 \end{justify}
 
 % ---------- Mestre P ----------
 \paragraph{Mestre P.}
 
-\figuracascata{Experimento 2C -- Mestre P e escravo P.}{fig:2c_p_p}
-    {img/2C/P-P/ensaio1-l2}{img/2C/P-P/ensaio1-l1}{img/2C/P-P/ensaio1-vp}{img/2C/P-P/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre P e escravo PI.}{fig:2c_p_pi}
-    {img/2C/P-PI/ensaio1-l2}{img/2C/P-PI/ensaio1-l1}{img/2C/P-PI/ensaio1-vp}{img/2C/P-PI/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre P e escravo PID.}{fig:2c_p_pid}
-    {img/2C/P-PID/ensaio1-l2}{img/2C/P-PID/ensaio1-l1}{img/2C/P-PID/ensaio1-vp}{img/2C/P-PID/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre P e escravo PID com filtro derivativo.}{fig:2c_p_pidf}
-    {img/2C/P-PID-F/ensaio1-l2}{img/2C/P-PID-F/ensaio1-l1}{img/2C/P-PID-F/ensaio1-vp}{img/2C/P-PID-F/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre P e escravo PID com anti-windup.}{fig:2c_p_pidaw}
-    {img/2C/P-PID-AW/ensaio1-l2}{img/2C/P-PID-AW/ensaio1-l1}{img/2C/P-PID-AW/ensaio1-vp}{img/2C/P-PID-AW/ensaio1-erros}
+\begin{justify}
+    \hspace{4ex}Com o mestre proporcional, todas as combinações apresentaram erro em regime de aproximadamente 2,5~cm em $L_2$, independentemente do controlador escravo (Figura~\ref{fig:2c_mestre_p}). Isso ocorre porque a malha externa não possui ação integral: o escravo até consegue fazer $L_1$ seguir $L_{1d}$, mas a própria referência $L_{1d} = K_{p,M}\,e_x$ só é diferente de zero se houver erro em $L_2$. Quando o escravo possui ação integral, $L_1 = L_{1d}$ em regime e, sendo $L_1 = \alpha L_2$ a relação de regime entre os níveis, obtém-se a Equação~\eqref{eq:2c_ess_mestre_p}.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Escravo P]{\grafico{img/2c/PP/output.pdf}}\hfill
+    \subfloat[Escravo PI]{\grafico{img/2c/P_PI/output.pdf}}\\
+    \subfloat[Escravo PID]{\grafico{img/2c/P_PID/output.pdf}}\hfill
+    \subfloat[Escravo PIDF]{\grafico{img/2c/P_PIDF/OUTPUT.pdf}}
+    \caption{Experimento 2C -- Controlador mestre P combinado com diferentes controladores escravos.}
+    \label{fig:2c_mestre_p}
+\end{figure}
+
+\begin{equation}
+    L_{2,ss} = \frac{K_{p,M}}{K_{p,M} + \alpha}\, r
+    \label{eq:2c_ess_mestre_p}
+\end{equation}
 
 \begin{justify}
-    \hspace{4ex}Com o mestre proporcional, a malha externa não possui ação integral e, portanto, espera-se erro em regime não nulo em $L_2$, independentemente do controlador escravo: o escravo pode fazer $L_1$ seguir $L_{1d}$ com precisão, mas o próprio $L_{1d}$ só é diferente de zero se houver erro em $L_2$. \pendente{Confirmar com os dados e comparar o efeito dos diferentes escravos sobre a rapidez da malha interna e sobre o ruído em $V_P$.}
+    \hspace{4ex}Para P/PID ($K_{p,M} = 5$, $\alpha \approx 0{,}97$), a equação prevê $L_{2,ss} \approx 12{,}6$~cm, exatamente o valor medido; para P/PIDF ($K_{p,M} = 5$, $\alpha \approx 1{,}08$), prevê $12{,}3$~cm, contra $12{,}35$~cm medidos. Para P/PI ($K_{p,M} = 4$), o valor previsto é $12{,}1$~cm; o valor de $12{,}6$~cm registrado aos 120~s se deve ao fato de $L_2$ ainda estar descendo no final do ensaio. A equação mostra que o erro só diminui com o aumento de $K_{p,M}$: para reduzi-lo a menos de 1~cm seria necessário $K_{p,M} \approx 14$, o que tornaria a malha externa muito agressiva. A solução adequada é incluir a ação integral no mestre.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}O controlador escravo, embora não altere o erro em regime, altera bastante o transitório. Com o escravo P (P/P), a resposta de $L_2$ é sobreamortecida e acomoda em cerca de 22~s, pois o escravo deixa de saturar mais cedo e $L_1$ atinge o menor pico entre todos os ensaios (23,1~cm). Já com os escravos com ação integral, sintonizados com $K_i$ elevado ($0{,}2$ e $0{,}175$), o integrador do escravo acumula erro durante todo o período de saturação da bomba, e $L_1$ sobe até 26,4~cm. Esse excesso de água no tanque 1 é transferido ao tanque 2, que ultrapassa seu valor final em 15 a 16\% e depois desce lentamente, apenas pela vazão de saída, levando de 65 a 70~s para acomodar. Com o escravo PIDF, ensaiado na segunda condição inicial, o efeito é ainda mais intenso: $L_1$ atinge o limite de cerca de 28~cm, onde permanece por alguns segundos, e $L_2$ chega a 15,9~cm, cerca de 29\% acima do valor final. Portanto, com mestre P, a ação integral no escravo não traz benefício em regime e piora o transitório.
 \end{justify}
 
 % ---------- Mestre PI ----------
 \paragraph{Mestre PI.}
 
-\figuracascata{Experimento 2C -- Mestre PI e escravo P.}{fig:2c_pi_p}
-    {img/2C/PI-P/ensaio1-l2}{img/2C/PI-P/ensaio1-l1}{img/2C/PI-P/ensaio1-vp}{img/2C/PI-P/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PI e escravo PI.}{fig:2c_pi_pi}
-    {img/2C/PI-PI/ensaio1-l2}{img/2C/PI-PI/ensaio1-l1}{img/2C/PI-PI/ensaio1-vp}{img/2C/PI-PI/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PI e escravo PID.}{fig:2c_pi_pid}
-    {img/2C/PI-PID/ensaio1-l2}{img/2C/PI-PID/ensaio1-l1}{img/2C/PI-PID/ensaio1-vp}{img/2C/PI-PID/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PI e escravo PID com filtro derivativo.}{fig:2c_pi_pidf}
-    {img/2C/PI-PID-F/ensaio1-l2}{img/2C/PI-PID-F/ensaio1-l1}{img/2C/PI-PID-F/ensaio1-vp}{img/2C/PI-PID-F/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PI e escravo PID com anti-windup.}{fig:2c_pi_pidaw}
-    {img/2C/PI-PID-AW/ensaio1-l2}{img/2C/PI-PID-AW/ensaio1-l1}{img/2C/PI-PID-AW/ensaio1-vp}{img/2C/PI-PID-AW/ensaio1-erros}
+\begin{justify}
+    \hspace{4ex}Com ação integral na malha mestre, o erro em regime de $L_2$ foi eliminado em todas as combinações (Figura~\ref{fig:2c_mestre_pi}). As combinações PI/P, PI/PI e PI/PID tiveram respostas praticamente idênticas: $L_2$ converge para 15~cm sem sobressinal, com tempo de acomodação entre 25 e 29~s, e $L_1$ atinge um pico de cerca de 26~cm antes de descer suavemente até o valor de regime.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Escravo P]{\grafico{img/2c/PI_P/output.pdf}}\hfill
+    \subfloat[Escravo PI]{\grafico{img/2c/PI_PI/output.pdf}}\\
+    \subfloat[Escravo PID]{\grafico{img/2c/PI_PID/output.pdf}}\hfill
+    \subfloat[Escravo PIDF]{\grafico{img/2c/PI_PIDF/OUTPUT.pdf}}
+    \caption{Experimento 2C -- Controlador mestre PI combinado com diferentes controladores escravos.}
+    \label{fig:2c_mestre_pi}
+\end{figure}
 
 \begin{justify}
-    \hspace{4ex}Com ação integral na malha mestre, o erro em regime de $L_2$ tende a zero. Nesse caso, mesmo um escravo apenas proporcional pode ser suficiente: o erro em regime da malha interna ($L_1 \neq L_{1d}$) é compensado pelo integrador do mestre, que ajusta $L_{1d}$ até que $L_2 = r$. \pendente{Verificar se o escravo P já fornece bom desempenho e se a ação integral no escravo trouxe benefício ou apenas mais oscilação. Comentar o windup do mestre quando $L_{1d}$ satura.}
+    \hspace{4ex}O resultado da combinação PI/P mostra que, com o integrador no mestre, o escravo apenas proporcional já é suficiente. O erro em regime da malha interna ($L_1 \neq L_{1d}$) é compensado pelo integrador do mestre, que ajusta $L_{1d}$ até que $L_2 = r$. A inclusão da ação integral no escravo (PI/PI), com ganho baixo ($K_i = 0{,}03$), não trouxe ganho perceptível de desempenho, mas também não causou oscilações. Da mesma forma, a ação derivativa do escravo PID ($K_d = 0{,}01$) não alterou a resposta, como será discutido na Seção~\ref{sec:2c_ganhos}.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Na combinação PI/PIDF, realizada na segunda condição inicial, $L_1$ atingiu 28,2~cm e $L_2$ apresentou sobressinal de cerca de 3\%, levando aproximadamente 67~s para acomodar. Como o filtro atua apenas sobre uma ação derivativa de ganho muito pequeno, esse sobressinal não se deve ao filtro, e sim ao nível inicial mais baixo: com mais tempo de bomba saturada e erro maior em $L_2$, o integrador do mestre acumula mais erro, mantém $L_{1d}$ elevado por mais tempo e, como o tanque 2 não pode ser esvaziado pela bomba, o excesso decai lentamente. Observa-se ainda uma pequena perturbação em $L_1$ por volta de 58~s, que é corrigida pela malha interna sem efeito visível em $L_2$, exemplificando a capacidade da cascata de rejeitar distúrbios no tanque 1.
 \end{justify}
 
 % ---------- Mestre PID ----------
 \paragraph{Mestre PID.}
 
-\figuracascata{Experimento 2C -- Mestre PID e escravo P.}{fig:2c_pid_p}
-    {img/2C/PID-P/ensaio1-l2}{img/2C/PID-P/ensaio1-l1}{img/2C/PID-P/ensaio1-vp}{img/2C/PID-P/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PID e escravo PI.}{fig:2c_pid_pi}
-    {img/2C/PID-PI/ensaio1-l2}{img/2C/PID-PI/ensaio1-l1}{img/2C/PID-PI/ensaio1-vp}{img/2C/PID-PI/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PID e escravo PID.}{fig:2c_pid_pid}
-    {img/2C/PID-PID/ensaio1-l2}{img/2C/PID-PID/ensaio1-l1}{img/2C/PID-PID/ensaio1-vp}{img/2C/PID-PID/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PID e escravo PID com filtro derivativo.}{fig:2c_pid_pidf}
-    {img/2C/PID-PID-F/ensaio1-l2}{img/2C/PID-PID-F/ensaio1-l1}{img/2C/PID-PID-F/ensaio1-vp}{img/2C/PID-PID-F/ensaio1-erros}
-\figuracascata{Experimento 2C -- Mestre PID e escravo PID com anti-windup.}{fig:2c_pid_pidaw}
-    {img/2C/PID-PID-AW/ensaio1-l2}{img/2C/PID-PID-AW/ensaio1-l1}{img/2C/PID-PID-AW/ensaio1-vp}{img/2C/PID-PID-AW/ensaio1-erros}
+\begin{justify}
+    \hspace{4ex}Os resultados com mestre PID (Figura~\ref{fig:2c_mestre_pid}) são muito próximos dos obtidos com mestre PI. As combinações PID/P, PID/PI e PID/PID levaram $L_2$ à referência com sobressinal inferior a 1\% e tempo de acomodação entre 26 e 29~s; as combinações PID/PI e PID/PID foram as mais rápidas do grupo, mas a diferença em relação ao mestre PI é de cerca de 1~s, comparável à repetibilidade dos ensaios. A ação derivativa do mestre, com $K_d = 0{,}05$, tem efeito muito pequeno, pois $L_2$ varia lentamente.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Escravo P]{\grafico{img/2c/PID_P/output.pdf}}\hfill
+    \subfloat[Escravo PI]{\grafico{img/2c/PID_PI/output.pdf}}\\
+    \subfloat[Escravo PID]{\grafico{img/2c/PID_PID/output.pdf}}\hfill
+    \subfloat[Escravo PIDF]{\grafico{img/2c/PID_PIDF/OUTPUT.pdf}}\\
+    \subfloat[Escravo PIDAW]{\grafico{img/2c/PID_PIDAW/output.pdf}}
+    \caption{Experimento 2C -- Controlador mestre PID combinado com diferentes controladores escravos.}
+    \label{fig:2c_mestre_pid}
+\end{figure}
 
 \begin{justify}
-    \hspace{4ex}A ação derivativa no mestre atua sobre a variação de $L_2$ e pode antecipar a correção de $L_{1d}$, reduzindo o sobressinal. Como a saída do mestre é uma referência de nível, e não diretamente a tensão na bomba, o ruído amplificado pela derivada é parcialmente atenuado pela dinâmica da malha interna. \pendente{Discutir com base nos dados, em especial a combinação com o escravo PID com derivada sem filtro, em que o ruído é derivado duas vezes em cascata.}
+    \hspace{4ex}As combinações PID/PIDF e PID/PIDAW, realizadas na mesma condição inicial e com os mesmos ganhos proporcional, integral e derivativo no escravo, permitem isolar o efeito do \textit{anti-reset windup}. Com o PIDF no escravo, o integrador continua acumulando erro enquanto a bomba está saturada; $L_1$ chega a 28,2~cm e $L_2$ apresenta sobressinal de 3,7\%, acomodando em cerca de 70~s. Com o PIDAW, o integrador é descarregado durante a saturação, o que reduz o pico de $L_1$ para 27,6~cm, o sobressinal de $L_2$ para cerca de 1\% e o tempo de acomodação para aproximadamente 37~s, quase metade do valor anterior. Esse resultado confirma que, nesta planta, o \textit{windup} do escravo durante a saturação inicial é a principal causa do sobressinal em $L_2$.
+\end{justify}
+
+% ---------- Mestre PIDF ----------
+\paragraph{Mestre PID com filtro derivativo (PIDF).}
+
+\begin{justify}
+    \hspace{4ex}Além das combinações exigidas no roteiro, o mestre PID com filtro derivativo também foi testado (Figura~\ref{fig:2c_mestre_pidf}). Todos esses ensaios foram feitos na segunda condição inicial, de modo que são comparáveis entre si. Com os escravos P, PI, PID e PIDF, o comportamento foi muito semelhante: $L_1$ atinge entre 27,8 e 28,0~cm, $L_2$ apresenta sobressinal de 2,7 a 3,5\% e o tempo de acomodação fica entre 51 e 64~s, sem erro em regime. Assim como nos casos anteriores, a escolha do escravo entre P, PI, PID e PIDF teve pouca influência, pois a dinâmica é dominada pela saturação inicial da bomba e pela ação integral do mestre. O filtro no mestre também não produziu diferença visível no nível, já que a ação derivativa filtrada é pequena; seu benefício esperado, a redução do ruído transmitido a $L_{1d}$ e a $V_P$, não pode ser verificado apenas pelas curvas de nível.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Escravo P]{\grafico{img/2c/PIDF_P/output.pdf}}\hfill
+    \subfloat[Escravo PI]{\grafico{img/2c/PIDF_PI/output.pdf}}\\
+    \subfloat[Escravo PID]{\grafico{img/2c/PIDF_PID/output.pdf}}\hfill
+    \subfloat[Escravo PIDF]{\grafico{img/2c/PIDF_PIDF/OUTPUT.pdf}}\\
+    \subfloat[Escravo PIDAW]{\grafico{img/2c/PIDF_PIDAW/OUTPUT.pdf}}
+    \caption{Experimento 2C -- Controlador mestre PID com filtro derivativo combinado com diferentes controladores escravos.}
+    \label{fig:2c_mestre_pidf}
+\end{figure}
+
+\begin{justify}
+    \hspace{4ex}A combinação PIDF/PIDAW foi a que apresentou o melhor desempenho de todo o experimento: $L_1$ teve o menor pico do grupo (27,3~cm), $L_2$ alcançou a referência sem sobressinal e acomodou em cerca de 27~s. Comparada à combinação PIDF/PIDF, o tempo de acomodação caiu de 64 para 27~s, reforçando a conclusão obtida com o mestre PID: o \textit{anti-reset windup} na malha escrava é o elemento que mais melhora a resposta, porque atua justamente no período em que a bomba está saturada. Vale notar que, nesse ensaio, o escravo usou $K_i = 0{,}05$, maior que nos demais, e mesmo assim não houve sobressinal, já que o \textit{anti-windup} impede que esse ganho maior se traduza em acúmulo excessivo durante a saturação.
 \end{justify}
 
 \begin{table}[H]
 \centering
-\caption{Métricas de desempenho das combinações de controladores no controle em cascata.}
+\caption{Métricas de desempenho das combinações de controladores no controle em cascata. $L_{2,0}$: nível inicial do tanque 2; $L_{1,\max}$: pico de $L_1$; $L_{1,ss}$: nível de regime de $L_1$. Para o mestre P, $M_p$ é calculado em relação ao valor final de $L_2$; nos demais casos, em relação à referência.}
 \label{tab:2c_combinacoes}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\textbf{Mestre} & \textbf{Escravo} & \textbf{Ganhos mestre} & \textbf{Ganhos escravo} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
-P   & P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-P   & PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-P   & PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-P   & PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-P   & PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PI  & P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PI  & PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PI  & PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PI  & PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PI  & PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PID & P          & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PID & PI         & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PID & PID        & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PID & PID-Filtro & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-PID & PID-AW     & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
+\textbf{Mestre} & \textbf{Escravo} & $\mathbf{L_{2,0}}$ \textbf{(cm)} & $\mathbf{L_{1,max}}$ \textbf{(cm)} & $\mathbf{L_{2,max}}$ \textbf{(cm)} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} & $\mathbf{L_{1,ss}}$ \textbf{(cm)} \\ \hline
+P    & P     & 3,0 & 23,1 & 12,5 & 0        & 14 & 22 & 2,5 & 12,1 \\ \hline
+P    & PI    & 6,2 & 26,4 & 14,6 & 16       & 9  & 66 & 2,4 & 12,3 \\ \hline
+P    & PID   & 5,8 & 26,5 & 14,5 & 15       & 9  & 68 & 2,4 & 12,2 \\ \hline
+P    & PIDF  & 1,6 & 28,4 & 15,9 & 29       & 14 & 77 & 2,7 & 13,4 \\ \hline
+PI   & P     & 3,2 & 25,8 & 15,0 & 0        & 17 & 29 & $\approx 0$ & 15,1 \\ \hline
+PI   & PI    & 2,9 & 26,3 & 15,0 & 0        & 16 & 25 & $\approx 0$ & 14,8 \\ \hline
+PI   & PID   & 3,0 & 26,1 & 15,0 & 0        & 16 & 25 & $\approx 0$ & 14,9 \\ \hline
+PI   & PIDF  & 1,2 & 28,2 & 15,5 & 3,3      & 18 & 67 & $\approx 0$ & 16,2 \\ \hline
+PID  & P     & 3,7 & 26,2 & 15,1 & 0,7      & 16 & 29 & $\approx 0$ & 15,3 \\ \hline
+PID  & PI    & 3,1 & 26,0 & 14,9 & 0        & 16 & 26 & $\approx 0$ & 14,9 \\ \hline
+PID  & PID   & 2,9 & 26,1 & 15,0 & 0,3      & 16 & 26 & $\approx 0$ & 14,9 \\ \hline
+PID  & PIDF  & 1,2 & 28,2 & 15,6 & 3,7      & 18 & 70 & $\approx 0$ & 16,2 \\ \hline
+PID  & PIDAW & 1,2 & 27,6 & 15,2 & 1,1      & 18 & 37 & $\approx 0$ & 16,1 \\ \hline
+PIDF & P     & 1,4 & 27,8 & 15,5 & 3,5      & 18 & 51 & $\approx 0$ & 16,5 \\ \hline
+PIDF & PI    & 1,3 & 27,9 & 15,4 & 2,8      & 18 & 56 & $\approx 0$ & 16,3 \\ \hline
+PIDF & PID   & 1,2 & 28,0 & 15,5 & 3,3      & 18 & 53 & $\approx 0$ & 16,4 \\ \hline
+PIDF & PIDF  & 1,5 & 28,0 & 15,4 & 2,7      & 17 & 64 & $\approx 0$ & 16,2 \\ \hline
+PIDF & PIDAW & 1,5 & 27,3 & 14,9 & 0        & 18 & 27 & $\approx 0$ & 16,2 \\ \hline
 \end{tabular}%
 }
 \end{table}
 
 %-------------------------------------------------------------
 \subsubsection{Influência dos Ganhos}
+\label{sec:2c_ganhos}
 
 \begin{justify}
-    \hspace{4ex}Para avaliar a sensibilidade da estratégia em cascata à sintonia, a combinação \dado{mestre ? / escravo ?} foi ensaiada com diferentes valores de ganhos, conforme a Tabela~\ref{tab:2c_ganhos} e as Figuras~\ref{fig:2c_ganhos_1} e~\ref{fig:2c_ganhos_2}. \pendente{Repetir este bloco para outras combinações, se necessário.}
+    \hspace{4ex}Para cada combinação foi registrado apenas o ensaio com o conjunto final de ganhos (Tabela~\ref{tab:2c_ganhos_metodologia}); entretanto, como os ganhos variam entre as combinações, é possível avaliar a influência de cada um deles comparando ensaios semelhantes.
 \end{justify}
 
-\figuracascata{Experimento 2C -- Variação de ganhos (ensaio 1).}{fig:2c_ganhos_1}
-    {img/2C/ganhos/ensaio1-l2}{img/2C/ganhos/ensaio1-l1}{img/2C/ganhos/ensaio1-vp}{img/2C/ganhos/ensaio1-erros}
+\begin{itemize}
+    \item \textbf{Ganho proporcional do mestre ($K_{p,M}$):} com mestre P, determina diretamente o erro em regime, conforme a Equação~\eqref{eq:2c_ess_mestre_p}. Passar de $K_{p,M} = 4$ para $5$ reduz o erro previsto de cerca de 2,9 para 2,4~cm, uma melhoria pequena, o que evidencia que o mestre P não é adequado quando se exige erro nulo. Com mestre PI ou PID, $K_{p,M}$ entre 4 e 4,5 produziu respostas sem oscilação, o que indica que a malha interna é rápida o suficiente para que o mestre opere com ganhos relativamente altos.
 
-\figuracascata{Experimento 2C -- Variação de ganhos (ensaio 2).}{fig:2c_ganhos_2}
-    {img/2C/ganhos/ensaio2-l2}{img/2C/ganhos/ensaio2-l1}{img/2C/ganhos/ensaio2-vp}{img/2C/ganhos/ensaio2-erros}
+    \item \textbf{Ganho integral do mestre ($K_{i,M}$):} é o responsável pela eliminação do erro em regime. Valores entre 0,07 e 0,1 eliminaram o erro sem sobressinal significativo na primeira condição inicial. Na segunda condição inicial, em que o erro inicial é maior e dura mais, o mesmo $K_{i,M}$ produziu sobressinal de cerca de 3\%, efeito típico de acúmulo excessivo no integrador.
 
-\begin{table}[H]
-\centering
-\caption{Influência dos ganhos no controle em cascata.}
-\label{tab:2c_ganhos}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|c|c|c|c|c|c|c|}
-\hline
-\textbf{Ensaio} & \textbf{Ganhos mestre} & \textbf{Ganhos escravo} & $\mathbf{M_p}$ \textbf{(\%)} & $\mathbf{t_r}$ \textbf{(s)} & $\mathbf{t_s}$ \textbf{(s)} & $\mathbf{e_{ss}}$ \textbf{(cm)} \\ \hline
-1 & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-2 & \pv & \pv & \pv & \pv & \pv & \pv \\ \hline
-\end{tabular}%
-}
-\end{table}
+    \item \textbf{Ganho integral do escravo ($K_{i,E}$):} quando elevado ($0{,}175$ a $0{,}2$, nas combinações P/PI, P/PID e P/PIDF), causou acúmulo de erro durante a saturação da bomba, elevando o pico de $L_1$ e o sobressinal de $L_2$. Com valores baixos ($0{,}03$), o escravo PI/PID teve desempenho equivalente ao escravo P. Na prática, quando o mestre já possui ação integral, o integrador do escravo é dispensável; quando é usado, deve vir acompanhado de \textit{anti-windup}.
+
+    \item \textbf{Ganhos derivativos ($K_d$) e filtro ($\tau_f$):} com os valores utilizados, a contribuição da ação derivativa é desprezível. Durante a subida, $L_2$ varia a cerca de $0{,}7$~cm/s, de modo que $K_{d,M} = 0{,}05$ contribui com apenas $0{,}035$~cm em $L_{1d}$; da mesma forma, com $L_1$ variando a cerca de $1{,}2$~cm/s, $K_{d,E} = 0{,}01$ contribui com cerca de $0{,}01$~V em $V_P$. Por isso, as combinações com e sem ação derivativa (PI/PI e PI/PID, PID/PI e PID/PID) apresentaram curvas praticamente sobrepostas. Ganhos derivativos maiores não foram necessários, pois a cascata já eliminou as oscilações que, na malha simples, justificavam o uso da ação derivativa.
+
+    \item \textbf{Ganho de \textit{anti-windup} ($K_{aw}$):} foi o parâmetro de maior impacto entre os ensaios comparáveis, reduzindo o tempo de acomodação em 47\% (PID/PIDF $\rightarrow$ PID/PIDAW) e 58\% (PIDF/PIDF $\rightarrow$ PIDF/PIDAW) e eliminando o sobressinal.
+\end{itemize}
 
 \begin{justify}
-    \hspace{4ex}Na sintonia de uma cascata, a malha interna deve ser ajustada primeiro e de forma a ser significativamente mais rápida que a externa. Se o mestre for sintonizado de forma agressiva em relação ao escravo, as duas dinâmicas se sobrepõem e o sistema tende a oscilar. \pendente{Discutir os ensaios à luz dessa regra: o que ocorreu ao aumentar os ganhos do escravo? E os do mestre?}
+    \hspace{4ex}De forma geral, os resultados confirmam a regra de sintonia de sistemas em cascata: a malha interna deve ser mais rápida que a externa e deve ser projetada primeiro. Nesta planta, como o tanque 1 já é naturalmente mais rápido que o tanque 2 e a bomba permanece saturada no início, o desempenho foi pouco sensível aos ganhos proporcionais e derivativos e muito sensível ao tratamento da saturação, isto é, à quantidade de erro acumulada pelos integradores enquanto a bomba está saturada.
 \end{justify}
 
+%-------------------------------------------------------------
+\subsubsection{Síntese do Experimento 2C}
+
 \begin{justify}
-    \hspace{4ex}\pendente{Fechar a seção indicando a melhor combinação de controladores e ganhos, justificando com a Tabela~\ref{tab:2c_combinacoes}.}
+    \hspace{4ex}O controle em cascata superou com folga o controle com malha simples do Experimento 2B: eliminou as oscilações sustentadas de $L_1$ e $L_2$, manteve $L_1$ abaixo do limite de intertravamento nas combinações realizadas na primeira condição inicial e reduziu o tempo de acomodação de mais de 120~s para cerca de 26~s. Entre as combinações, a presença de ação integral no mestre é o requisito essencial para erro nulo; o controlador escravo pode ser simples (P), desde que não acumule erro durante a saturação. As melhores combinações foram PIDF/PIDAW ($t_s \approx 27$~s, sem sobressinal, na condição inicial mais desfavorável) e PI/PI, PI/PID e PID/PID ($t_s \approx 25$~s, sem sobressinal). Considerando também a simplicidade de implementação, a combinação PI/P é uma alternativa adequada, com desempenho muito próximo ($t_s \approx 29$~s, sem sobressinal) e apenas três ganhos a ajustar.
 \end{justify}
 
 \newpage
