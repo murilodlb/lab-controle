@@ -1,0 +1,769 @@
+%%%%%%%%%%%% STRUCTURE %%%%%%%%%%%%%%%
+\documentclass[a4paper,12pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{ragged2e}
+\usepackage{float}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{red},
+    commentstyle=\color{gray}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{white},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    rulecolor=\color{black!20},
+    tabsize=4,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false,
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%% PAGES STYLE %%%%%%%%%
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+\fancypagestyle{main}{
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[RO]{\thepage}
+\fancyfoot[CO]{}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{subfig}
+\usepackage{mathptmx}
+\usepackage{changepage}
+\usepackage{xstring}
+%\usepackage[alf]{abntex2cite}
+
+%%%%%%%%%%% PDF METADATA %%%%%%%%%%%%%
+\usepackage[ pdftitle={RELATÓRIO SISTEMAS DE CONTROLE - UNIDADE 3},
+pdfsubject={LABORATÓRIO DE CONTROLE},
+pdfkeywords={Controle,Espaço de Estados,Observador de Estados,Seguidor de Referência,UFRN,DCA},
+hidelinks]{hyperref}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%% MACROS DO TEMPLATE %%%%%%%%
+% \dado{x}      -> dado experimental a preencher/conferir (vermelho no rascunho)
+% \pendente{x}  -> orientação de discussão a completar (azul no rascunho,
+%                  some na versão final)
+% Para gerar a versão final, troque \rascunhotrue por \rascunhofalse.
+\newif\ifrascunho
+\rascunhotrue
+\ifrascunho
+  \newcommand{\dado}[1]{\textcolor{red}{\textbf{[#1]}}}
+  \newcommand{\pendente}[1]{\textcolor{blue}{\textit{[PENDENTE: #1]}}}
+\else
+  \newcommand{\dado}[1]{#1}
+  \newcommand{\pendente}[1]{}
+\fi
+\newcommand{\pv}{\dado{?}}
+
+% \grafico[largura]{caminho}
+% Busca automaticamente o arquivo .png (mesmo se passado com ou sem extensao .png).
+% Se a imagem ainda nao existir na pasta, desenha uma caixa indicativa de pendencia.
+\newcommand{\grafico}[2][0.48\textwidth]{%
+  \StrSubstitute{#2}{.png}{}[\caminholimpo]%
+  \IfFileExists{\caminholimpo.png}{%
+    \includegraphics[width=#1]{\caminholimpo.png}%
+  }{%
+    \IfFileExists{#2}{%
+      \includegraphics[width=#1]{#2}%
+    }{%
+      \IfFileExists{\caminholimpo.pdf}{%
+        \includegraphics[width=#1]{\caminholimpo.pdf}%
+      }{%
+        \fbox{\parbox[c][\dimexpr #1*55/100\relax][c]{\dimexpr #1-2\fboxsep-2\fboxrule\relax}{%
+          \centering\footnotesize\color{red}Figura pendente\\[2pt]\texttt{\detokenize{#2}}}}%
+      }%
+    }%
+  }%
+}
+
+% \figuraensaio{legenda}{rótulo}{saída}{sinal de controle}{erro}
+% Usado para o primeiro ensaio detalhado: apresenta saída (PV e SP), sinal de controle (MV) e erro.
+\newcommand{\figuraensaio}[5]{%
+\begin{figure}[H]
+  \centering
+  \subfloat[Nível medido (PV) e referência (SP)]{\grafico[0.48\textwidth]{#3}}\hfill
+  \subfloat[Sinal de controle (MV)]{\grafico[0.48\textwidth]{#4}}\\[1ex]
+  \subfloat[Sinal de erro]{\grafico[0.52\textwidth]{#5}}
+  \caption{#1}
+  \label{#2}
+\end{figure}}
+
+% \figuraobservador{legenda}{rótulo}{estados L1 e L2}{erros de estimação}
+% Usado para exibir lado a lado os estados reais vs. estimados e o erro de estimação.
+\newcommand{\figuraobservador}[4]{%
+\begin{figure}[H]
+  \centering
+  \subfloat[Estados reais ($L_1, L_2$) e estimados ($\hat{L}_1, \hat{L}_2$)]{\grafico[0.48\textwidth]{#3}}\hfill
+  \subfloat[Erro de estimação ($\tilde{x} = x - \hat{x}$)]{\grafico[0.48\textwidth]{#4}}
+  \caption{#1}
+  \label{#2}
+\end{figure}}
+
+% \figurasaida{legenda}{rótulo}{imagem}
+% Usado para os demais ensaios: apresenta somente a curva principal centralizada.
+\newcommand{\figurasaida}[3]{%
+\begin{figure}[H]
+  \centering
+  \grafico[0.75\textwidth]{#3}
+  \caption{#1}
+  \label{#2}
+\end{figure}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\onehalfspacing
+
+\thispagestyle{empty}
+
+\setcounter{page}{1}
+
+%%%%%%%%%%%% LOGOS %%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[!ht]
+
+\centering
+
+\subfloat{
+\includegraphics[width=2.7cm]{img/UFRN-eps-converted-to.pdf}
+\label{UFRN Logo}
+}
+\hspace{11.09cm}
+\subfloat{
+\includegraphics[width=2.4cm]{img/DCA-eps-converted-to.pdf}
+\label{DCA Logo}
+}
+
+%\caption{}
+\label{Logos}
+
+\end{figure}
+
+%%%%%%%%%%%%%%% CAPA %%%%%%%%%%%%%%%%%
+
+\vspace{-1cm}
+
+\begin{center}
+{\bf{\normalsize UNIVERSIDADE FEDERAL DO RIO GRANDE DO NORTE\\
+CENTRO DE TECNOLOGIA\\
+DEPARTAMENTO DE ENGENHARIA DE COMPUTAÇÃO E AUTOMAÇÃO\\
+ENGENHARIA DE COMPUTAÇÃO E ENGENHARIA MECATRÔNICA
+}}
+
+
+\vspace{3.2cm}
+
+{\bf{\large RELATÓRIO DA 3º UNIDADE\\
+CONTROLE NO ESPAÇO DE ESTADOS: OBSERVADORES DE ESTADO E SEGUIDORES DE REFERÊNCIA\\
+}}
+\vspace{1.5cm}
+{\large TURMA: 1\\
+	GRUPO 20262G4T1}
+
+\vspace{3.4cm}
+
+
+
+\begin{flushright}
+\begin{normalsize}
+Danilo Isamu Pereira Hikague: 20230072008\\
+\vspace{0.8cm}
+Murilo de Lima Barros: 20250070735\\
+\vspace{0.8cm}
+Rafael Cabral Melo: 20210080441\\
+\vspace{0.8cm}
+Ramon Vinicius Ferreira de Souza: 20220017441\\
+\vspace{0.8cm}
+Virna Emanuelle Veloso Aguiar: 20220025354\\
+\end{normalsize}
+\end{flushright}
+
+
+\vspace{2.5cm}
+
+{\large Natal-RN\\
+2026}
+
+\end{center}
+
+\newpage
+
+%%%%%%%%%%%%%%%  CONTRA-CAPA %%%%%%%%%
+
+\thispagestyle{empty}
+
+\begin{center}
+\begin{normalsize}
+Danilo Isamu Pereira Hikague: 20230072008\\
+\vspace{0.8cm}
+Murilo de Lima Barros: 20250070735\\
+\vspace{0.8cm}
+Rafael Cabral Melo: 20210080441\\
+\vspace{0.8cm}
+Ramon Vinicius Ferreira de Souza: 20220017441\\
+\vspace{0.8cm}
+Virna Emanuelle Veloso Aguiar: 20220025354\\
+
+\end{normalsize}
+\end{center}
+\vspace{3cm}
+
+{\bf{\large {\centering CONTROLE NO ESPAÇO DE ESTADOS: OBSERVADORES DE ESTADO E SEGUIDORES DE REFERÊNCIA\\
+}}}
+
+\vspace{3.8cm}
+
+\begin{adjustwidth}{7.5cm}{0cm}
+
+{\normalsize
+
+Terceiro Relatório Parcial apresentado à disciplina de
+Projeto de Sistemas de Controle - Laboratório, correspondente à
+avaliação da 3º unidade do semestre 2026.2 do 7º período
+dos cursos: Engenharia de Computação e Engenharia Mecatrônica da
+Universidade Federal do Rio Grande do Norte, sob
+orientação do {\bf Prof. Fábio Meneghetti Ugulino de
+Araújo.}
+
+}
+
+\end{adjustwidth}
+
+\vspace{2cm}
+
+\begin{center}
+
+Professor: Fábio Meneghetti Ugulino de Araújo.
+
+\vspace{2.5cm}
+
+{\large Natal-RN\\
+2026}
+
+\end{center}
+
+\newpage
+
+%%%%%%%%%%%%%%%  RESUMO %%%%%%%%%%%%%%
+
+\thispagestyle{empty}
+
+\begin{center}
+{\large \textbf{RESUMO}}
+\end{center}
+
+\vspace{3cm}
+
+\vspace{\baselineskip}
+
+\begin{justify}
+    \hspace{4ex}Este relatório apresenta a modelagem, o projeto, a implementação e a validação experimental de estratégias de controle moderno no espaço de estados aplicadas ao sistema de tanques acoplados da Quanser\textsuperscript{\textregistered} operando na Configuração 2. A partir das equações diferenciais linearizadas em torno do ponto de operação nominal ($L_{10} = L_{20} = 15$~cm), obteve-se a representação matricial de estados tomando os níveis dos dois tanques ($L_1$ e $L_2$) como variáveis de estado, verificando-se analiticamente as propriedades de estabilidade, controlabilidade e observabilidade da planta. As atividades práticas foram divididas em três experimentos realizados no ambiente MATLAB\textsuperscript{\textregistered}/SIMULINK\textsuperscript{\textregistered} integrado ao QUARC\textsuperscript{\textregistered}: o projeto e avaliação de um observador assintótico de estados a partir da medição exclusiva do nível do tanque 2 (Experimento 3A); o projeto de um controlador seguidor de referência para entradas do tipo degrau utilizando realimentação dos estados reais medidos e ação integral via sistema aumentado (Experimento 3B); e a integração de ambos em um seguidor de referência com realimentação dos estados estimados pelo observador, fundamentado no Princípio da Separação (Experimento 3C). Os ganhos do observador ($L$) e do controlador aumentado ($K_a$) foram determinados pelo método de alocação de polos via Fórmula de Ackermann, investigando-se o impacto da localização dos polos sobre a velocidade de convergência, o sobressinal, o tempo de acomodação e a sensibilidade ao ruído de medição. \pendente{Resumir em 2--3 frases as principais conclusões: escolha ideal de polos para o observador em 3A, melhor conjunto de polos do seguidor em 3B e comparação de desempenho entre realimentação de estados reais (3B) e estados estimados (3C).}
+\end{justify}
+
+\vspace{\baselineskip}
+
+\noindent\textbf{Palavras-chave:} Espaço de estados. Tanques acoplados. Observador de estados. Alocação de polos. Seguidor de referência.
+
+\newpage
+
+%%%%%%%%% LISTA DE FIGURAS %%%%%%%%%%%
+
+\thispagestyle{empty}
+
+\begin{center}
+\listoffigures
+\end{center}
+
+\newpage
+
+%%%%%%%%%%%%%%% SUMÁRIO %%%%%%%%%%%%%%
+
+\thispagestyle{empty}
+
+\begin{center}
+\tableofcontents
+\end{center}
+
+\newpage
+
+%%%%%%%%%%%%%%% INTRODUÇÃO %%%%%%%%%%%
+
+\thispagestyle{main}
+
+\section{INTRODUÇÃO}
+
+\begin{justify}
+    \hspace{4ex}Enquanto a teoria de controle clássico fundamenta-se na descrição de sistemas no domínio da frequência por meio de funções de transferência relacionando uma única entrada a uma única saída (SISO), a abordagem moderna no espaço de estados descreve a dinâmica interna da planta no domínio do tempo através de um conjunto de equações diferenciais de primeira ordem acopladas. Essa formulação matricial permite tratar de maneira unificada sistemas com múltiplas entradas e múltiplas saídas (MIMO), incorporar condições iniciais não nulas e alocar arbitrariamente os polos de malha fechada — desde que o sistema satisfaça as condições algébricas de controlabilidade e observabilidade.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Na prática de engenharia, a implementação direta de leis de controle por realimentação de estados esbarra frequentemente na impossibilidade física ou no custo proibitivo de se medir todas as variáveis de estado da planta com sensores dedicados. Para superar essa limitação, recorre-se ao projeto de observadores de estado (estimadores assintóticos de Luenberger), que consistem em modelos dinâmicos executados em tempo real no computador de controle capazes de reconstruir o vetor de estados completo a partir apenas do sinal de controle aplicado ($u$) e da variável de saída mensurável ($y$). Adicionalmente, quando o objetivo de controle exige o rastreamento de referências constantes (entradas em degrau) com erro em regime permanente nulo e rejeição a perturbações, incorpora-se um integrador do erro de rastreamento à estrutura de realimentação de estados, originando o controlador seguidor de referência baseado em sistema aumentado.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Dando continuidade aos estudos realizados nas unidades anteriores sobre a bancada de tanques acoplados da Quanser\textsuperscript{\textregistered}, esta terceira unidade dedica-se ao projeto e à implementação prática de controladores e estimadores no espaço de estados para o sistema operando na Configuração 2 (dois tanques em cascata). As atividades experimentais foram estruturadas em três etapas complementares:
+\end{justify}
+
+\begin{itemize}
+    \item \textbf{Experimento 3A (Observador de Estados):} Obtenção da representação em espaço de estados para os níveis $L_1$ e $L_2$, verificação da observabilidade e projeto de um observador de estados pela Fórmula de Ackermann, avaliando a convergência das estimativas $\hat{L}_1$ e $\hat{L}_2$ para diferentes alocações de polos do observador;
+    \item \textbf{Experimento 3B (Seguidor de Referência com Estados Reais):} Formulação do sistema aumentado de terceira ordem, verificação da controlabilidade e projeto de um seguidor de referência para entradas em degrau realimentando as medições diretas de $L_1$ e $L_2$, analisando a resposta transitória e de regime para diferentes conjuntos de polos do controlador;
+    \item \textbf{Experimento 3C (Seguidor de Referência com Estados Estimados):} Acoplamento do seguidor de referência projetado no Experimento 3B com o observador de estados do Experimento 3A, realimentando os estados estimados $\hat{L}_1$ e $\hat{L}_2$ e confrontando o desempenho obtido com o caso de medição direta dos estados reais.
+\end{itemize}
+
+\newpage
+
+%%%%%%% FUNDAMENTAÇÃO TEÓRICA %%%%%%%
+
+\section{FUNDAMENTAÇÃO TEÓRICA}
+
+\subsection{Experimento 3A: Representação em Espaço de Estados e Observadores de Estado}
+
+\begin{justify}
+    \pendente{Escrever a fundamentação teórica do Experimento 3A: definição de estado e equações de estado/saída, estabilidade pelos autovalores de $A$, matrizes de controlabilidade ($U$) e observabilidade ($V$), estrutura do observador assintótico de Luenberger, dedução da dinâmica do erro de estimação $\dot{\tilde{x}} = (A - LC)\tilde{x}$ e Fórmula de Ackermann para cálculo de $L$.}
+\end{justify}
+
+\subsection{Experimento 3B: Seguidor de Referência por Realimentação de Estados}
+
+\begin{justify}
+    \pendente{Escrever a fundamentação teórica do Experimento 3B: rastreamento de referências do tipo degrau, definição das variáveis auxiliares $z = \dot{x}$ e $w = \dot{u}$, construção da matriz aumentada $(A_a, B_a)$, condição de controlabilidade do sistema aumentado e Fórmula de Ackermann para obtenção de $K_a = [k_1 \;\; k_2]$.}
+\end{justify}
+
+\subsection{Experimento 3C: Realimentação de Estados Estimados e Princípio da Separação}
+
+\begin{justify}
+    \pendente{Escrever a fundamentação teórica do Experimento 3C: combinação da realimentação de estados com o observador de estados, equação matricial global do sistema realimentado com estados estimados, Princípio da Separação (independência entre os autovalores do controlador e do observador) e implementação prática do seguidor com $\hat{x}(t)$.}
+\end{justify}
+
+\newpage
+
+%%%%%%%%%% METODOLOGIA %%%%%%%%%%%%%%%
+
+\thispagestyle{main}
+
+\section{METODOLOGIA}
+
+\subsection{Aparato Experimental}
+
+\begin{justify}
+    \hspace{4ex}Os três experimentos foram realizados na bancada de tanques acoplados da Quanser\textsuperscript{\textregistered}, configurada na topologia de segunda ordem (Configuração 2), na qual a bomba hidráulica alimenta exclusivamente o Tanque 1 superior e o efluente deste deságua por gravidade no Tanque 2 inferior. O conjunto físico foi supervisionado por um microcomputador executando os softwares MATLAB\textsuperscript{\textregistered}/SIMULINK\textsuperscript{\textregistered} e QUARC\textsuperscript{\textregistered}, interligado à planta pelo sistema de aquisição de dados Q8-USB e pelo amplificador de potência VoltPAQ-X1 (ganho estático de tensão igual a 3). As leituras dos sensores de pressão na base de cada tanque foram convertidas em centímetros utilizando o fator de calibração de $6{,}25$~cm/V, mantendo-se os mecanismos de saturação ($\pm 4$~V no sinal enviado ao amplificador) e intertravamentos de segurança implementados na unidade anterior.
+\end{justify}
+
+\subsection{Modelagem em Espaço de Estados da Planta (Configuração 2)}
+
+\begin{justify}
+    \hspace{4ex}Conforme estabelecido nos roteiros experimentais, a dinâmica linearizada dos níveis incrementais dos tanques 1 e 2 em torno do ponto de equilíbrio estático $(L_{10}, L_{20})$ na Configuração 2 é regida pelas equações diferenciais ordinárias dadas na Equação~\eqref{eq:edos_tanques}:
+\end{justify}
+
+\begin{equation}
+    \begin{aligned}
+        \dot{L}_1(t) &= -\frac{a_1}{A_1}\sqrt{\frac{g}{2 L_{10}}}\, L_1(t) + \frac{K_m}{A_1}\, V_P(t) \\
+        \dot{L}_2(t) &= -\frac{a_2}{A_2}\sqrt{\frac{g}{2 L_{20}}}\, L_2(t) + \frac{a_1}{A_2}\sqrt{\frac{g}{2 L_{10}}}\, L_1(t)
+    \end{aligned}
+    \label{eq:edos_tanques}
+\end{equation}
+
+\begin{justify}
+    \noindent cujos parâmetros construtivos e operacionais nominais para o orifício de saída médio são:
+\end{justify}
+
+\begin{itemize}
+    \item áreas de seção transversal dos tanques: $A_1 = A_2 = 15{,}5179\text{ cm}^2$;
+    \item áreas dos orifícios de escoamento (médio): $a_1 = a_2 = 0{,}17813919765\text{ cm}^2$;
+    \item níveis de operação no equilíbrio: $L_{20} = 15\text{ cm}$ e $L_{10} = \dfrac{a_2^2}{a_1^2}\,L_{20} = 15\text{ cm}$;
+    \item aceleração da gravidade: $g = 981\text{ cm/s}^2$;
+    \item constante de vazão da bomba: $K_m = \dado{11{,}00}\text{ cm}^3/(\text{V}\cdot\text{s})$ (\pendente{confirmar se o grupo utilizou $K_m = 11{,}00$ do roteiro ou o valor experimental obtido na Unidade 1}).
+\end{itemize}
+
+\begin{justify}
+    \hspace{4ex}Adotando-se como vetor de estados $x(t) = \begin{bmatrix} x_1(t) & x_2(t) \end{bmatrix}^T = \begin{bmatrix} L_1(t) & L_2(t) \end{bmatrix}^T$, como variável de entrada $u(t) = V_P(t)$ e como variável de saída medida o nível do tanque inferior $y(t) = L_2(t)$, obtém-se a representação contínua no espaço de estados na forma padrão da Equação~\eqref{eq:espaco_estados_geral}:
+\end{justify}
+
+\begin{equation}
+    \begin{aligned}
+        \dot{x}(t) &= A\,x(t) + B\,u(t) \\
+        y(t) &= C\,x(t) + D\,u(t)
+    \end{aligned}
+    \label{eq:espaco_estados_geral}
+\end{equation}
+
+\begin{justify}
+    \noindent em que as matrizes literais do modelo são expressas pela Equação~\eqref{eq:matrizes_literais}:
+\end{justify}
+
+\begin{equation}
+    A = \begin{bmatrix} -\dfrac{a_1}{A_1}\sqrt{\dfrac{g}{2 L_{10}}} & 0 \\[1.2em] \dfrac{a_1}{A_2}\sqrt{\dfrac{g}{2 L_{10}}} & -\dfrac{a_2}{A_2}\sqrt{\dfrac{g}{2 L_{20}}} \end{bmatrix}, \quad
+    B = \begin{bmatrix} \dfrac{K_m}{A_1} \\[1.2em] 0 \end{bmatrix}, \quad
+    C = \begin{bmatrix} 0 & 1 \end{bmatrix}, \quad
+    D = 0
+    \label{eq:matrizes_literais}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}Substituindo os valores numéricos dos parâmetros físicos, obtêm-se as matrizes numéricas da planta na Equação~\eqref{eq:matrizes_numericas}:
+\end{justify}
+
+\begin{equation}
+    A = \begin{bmatrix} -0{,}0656 & 0 \\ 0{,}0656 & -0{,}0656 \end{bmatrix}, \quad
+    B = \begin{bmatrix} \dado{0{,}7089} \\ 0 \end{bmatrix}, \quad
+    C = \begin{bmatrix} 0 & 1 \end{bmatrix}, \quad
+    D = 0
+    \label{eq:matrizes_numericas}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}A partir da matriz dinâmica $A$, verifica-se que os polos de malha aberta (autovalores de $A$) são reais, negativos e repetidos em $\lambda_1 = \lambda_2 = -0{,}0656\text{ s}^{-1}$, confirmando que a planta linearizada é assintoticamente estável. As matrizes de controlabilidade $U = \begin{bmatrix} B & AB \end{bmatrix}$ e de observabilidade $V = \begin{bmatrix} C & CA \end{bmatrix}^T$ resultam em:
+\end{justify}
+
+\begin{equation}
+    U = \begin{bmatrix} \dado{0{,}7089} & \dado{-0{,}0465} \\ 0 & \dado{0{,}0465} \end{bmatrix}, \qquad
+    V = \begin{bmatrix} 0 & 1 \\ 0{,}0656 & -0{,}0656 \end{bmatrix}
+    \label{eq:control_observ}
+\end{equation}
+
+\begin{justify}
+    \noindent Como $\det(U) \neq 0 \implies \rho(U) = 2$ e $\det(V) = -0{,}0656 \neq 0 \implies \rho(V) = 2$, conclui-se que o sistema de segunda ordem é simultaneamente **completamente controlável** e **completamente observável**, garantindo a existência de solução para a alocação arbitrária de polos tanto do observador quanto do controlador.
+\end{justify}
+
+\subsection{Experimento 3A: Projeto e Implementação do Observador de Estados}
+
+\begin{justify}
+    \hspace{4ex}No Experimento 3A, implementou-se um observador assintótico de Luenberger de ordem completa para estimar o vetor de estados $\hat{x}(t) = \begin{bmatrix} \hat{L}_1(t) & \hat{L}_2(t) \end{bmatrix}^T$ utilizando apenas a leitura do sensor do Tanque 2 ($y(t) = L_2(t)$) e o sinal de tensão aplicado à bomba ($u(t) = V_P(t)$), segundo a Equação~\eqref{eq:observador_luenberger}:
+\end{justify}
+
+\begin{equation}
+    \begin{aligned}
+        \dot{\hat{x}}(t) &= A\,\hat{x}(t) + B\,u(t) + L\big(y(t) - \hat{y}(t)\big) \\
+        \hat{y}(t) &= C\,\hat{x}(t)
+    \end{aligned}
+    \label{eq:observador_luenberger}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}A dinâmica do erro de estimação $\tilde{x}(t) = x(t) - \hat{x}(t)$ é governada por $\dot{\tilde{x}}(t) = (A - LC)\,\tilde{x}(t)$. Para alocar os autovalores do observador nas posições desejadas $p_{o1}$ e $p_{o2}$, formou-se o polinômio característico desejado $\Delta_o(s) = (s - p_{o1})(s - p_{o2}) = s^2 + \alpha_1 s + \alpha_2$ e determinou-se o vetor de ganhos $L = \begin{bmatrix} l_1 & l_2 \end{bmatrix}^T$ pela Fórmula de Ackermann da Equação~\eqref{eq:ackermann_obs}:
+\end{justify}
+
+\begin{equation}
+    L = q_L(A)\,V^{-1}\begin{bmatrix} 0 \\ 1 \end{bmatrix}, \qquad \text{com } q_L(A) = A^2 + \alpha_1 A + \alpha_2 I
+    \label{eq:ackermann_obs}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}Para investigar a influência da localização dos polos sobre a velocidade de convergência da estimativa e a sensibilidade ao ruído de medição, foram selecionados \dado{N} conjuntos de polos para o observador (\pendente{especificar os conjuntos de polos testados e os respectivos ganhos $L = [l_1 \;\; l_2]^T$ calculados, por exemplo: Conjunto 1 com polos em $s = \dado{?}$, $L = \dado{?}$; Conjunto 2 com polos em $s = \dado{?}$, $L = \dado{?}$; Conjunto 3 com polos em $s = \dado{?}$, $L = \dado{?}$}). O diagrama de blocos implementado no SIMULINK\textsuperscript{\textregistered} para o Experimento 3A é apresentado na Figura~\ref{fig:simulink_3a}.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/simulink/3a-observador.png}
+    \caption{Diagrama de blocos do observador de estados implementado no SIMULINK para o Experimento 3A.}
+    \label{fig:simulink_3a}
+\end{figure}
+
+\subsection{Experimento 3B: Projeto e Implementação do Seguidor de Referência}
+
+\begin{justify}
+    \hspace{4ex}No Experimento 3B, objetivou-se o controle em malha fechada do nível $L_2(t)$ para o acompanhamento de referências em degrau ($r(t) = \dado{15}\text{ cm}$) com erro em regime permanente nulo, dispondo da medição direta de ambos os estados $L_1(t)$ e $L_2(t)$. Definindo o erro de rastreamento $e(t) = y(t) - r(t)$ e as variáveis auxiliares $z(t) = \dot{x}(t)$ e $w(t) = \dot{u}(t)$, construiu-se o sistema aumentado de terceira ordem dado pela Equação~\eqref{eq:sistema_aumentado}:
+\end{justify}
+
+\begin{equation}
+    \begin{bmatrix} \dot{e}(t) \\ \dot{z}(t) \end{bmatrix} =
+    \underbrace{\begin{bmatrix} 0 & C \\ \mathbf{0}_{2\times 1} & A \end{bmatrix}}_{A_a}
+    \begin{bmatrix} e(t) \\ z(t) \end{bmatrix} +
+    \underbrace{\begin{bmatrix} 0 \\ B \end{bmatrix}}_{B_a} w(t)
+    \label{eq:sistema_aumentado}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}A matriz de controlabilidade do sistema aumentado, $U_a = \begin{bmatrix} B_a & A_a B_a & A_a^2 B_a \end{bmatrix}$, possui posto completo ($\rho(U_a) = 3$). Escolhendo-se os três polos desejados para a malha fechada ($p_{c1}, p_{c2}, p_{c3}$), que definem o polinômio característico $\Delta_c(s) = (s - p_{c1})(s - p_{c2})(s - p_{c3}) = s^3 + a_1 s^2 + a_2 s + a_3$, calculou-se o vetor de ganhos aumentado $K_a$ pela Fórmula de Ackermann na Equação~\eqref{eq:ackermann_seg}:
+\end{justify}
+
+\begin{equation}
+    K_a = \begin{bmatrix} k_1 & k_2 \end{bmatrix} = \begin{bmatrix} k_1 & k_{21} & k_{22} \end{bmatrix} = -\begin{bmatrix} 0 & 0 & 1 \end{bmatrix} U_a^{-1}\, q_c(A_a), \qquad
+    \text{onde } q_c(A_a) = A_a^3 + a_1 A_a^2 + a_2 A_a + a_3 I
+    \label{eq:ackermann_seg}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}Integrando $w(t) = k_1 e(t) + k_2 z(t)$ no tempo e invertendo o sinal de $k_1$ para adequar à convenção de somador padrão do diagrama de blocos em que $e(t) = r(t) - y(t)$, a lei de controle enviada ao saturador ($\pm 4$~V) assume a forma da Equação~\eqref{eq:lei_seguidor_real}:
+\end{justify}
+
+\begin{equation}
+    u(t) = k_1 \int_0^t \big(r(\tau) - L_2(\tau)\big)\,d\tau + k_{21}\,L_1(t) + k_{22}\,L_2(t)
+    \label{eq:lei_seguidor_real}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}Foram projetados e ensaiados \dado{N} conjuntos de polos para o seguidor de referência (\pendente{listar os conjuntos de polos escolhidos e os respectivos ganhos $k_1$, $k_{21}$ e $k_{22}$ obtidos}). O diagrama implementado no SIMULINK\textsuperscript{\textregistered} é exibido na Figura~\ref{fig:simulink_3b}.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/simulink/3b-seguidor.png}
+    \caption{Diagrama de blocos do seguidor de referência com realimentação dos estados reais no SIMULINK (Experimento 3B).}
+    \label{fig:simulink_3b}
+\end{figure}
+
+\subsection{Experimento 3C: Seguidor de Referência com Estados Estimados}
+
+\begin{justify}
+    \hspace{4ex}No Experimento 3C, uniram-se as estruturas desenvolvidas nas duas práticas precedentes para realizar o controle de nível do Tanque 2 sem utilizar a medição física do sensor do Tanque 1 na lei de realimentação. Com base no Princípio da Separação, o projeto do ganho do seguidor $K_a = \begin{bmatrix} k_1 & k_{21} & k_{22} \end{bmatrix}$ e do ganho do observador $L = \begin{bmatrix} l_1 & l_2 \end{bmatrix}^T$ é realizado de maneira independente, e a ação de controle passa a utilizar diretamente as estimativas $\hat{x}(t) = \begin{bmatrix} \hat{L}_1(t) & \hat{L}_2(t) \end{bmatrix}^T$ fornecidas pelo observador de estados, conforme a Equação~\eqref{eq:lei_seguidor_estimado}:
+\end{justify}
+
+\begin{equation}
+    u(t) = k_1 \int_0^t \big(r(\tau) - L_2(\tau)\big)\,d\tau + k_{21}\,\hat{L}_1(t) + k_{22}\,\hat{L}_2(t)
+    \label{eq:lei_seguidor_estimado}
+\end{equation}
+
+\begin{justify}
+    \hspace{4ex}Os ensaios foram conduzidos combinando diferentes alocações de polos para o seguidor e para o observador (\pendente{indicar as combinações de polos testadas no Experimento 3C}), mantendo-se a regra prática de alocar os polos do observador mais à esquerda no semiplano complexo do que os polos dominantes do seguidor, de modo que a dinâmica de estimação convirja mais rapidamente que a dinâmica de controle. O diagrama completo implementado no SIMULINK\textsuperscript{\textregistered} é ilustrado na Figura~\ref{fig:simulink_3c}.
+\end{justify}
+
+\begin{figure}[H]
+    \centering
+    \grafico[0.9\textwidth]{img/simulink/3c-seguidor-observador.png}
+    \caption{Diagrama de blocos do seguidor de referência acoplado ao observador de estados no SIMULINK (Experimento 3C).}
+    \label{fig:simulink_3c}
+\end{figure}
+
+\newpage
+
+%%%%%%%%%% RESULTADOS %%%%%%%%%%%%%%%
+
+\thispagestyle{main}
+
+\section{RESULTADOS}
+
+%=============================================================
+\subsection{Experimento 3A: Observador de Estados}
+
+\begin{justify}
+    \hspace{4ex}Nesta seção são analisados os resultados experimentais do observador de estados operando em paralelo com a planta na Configuração 2. O objetivo central consiste em verificar a capacidade do algoritmo em reconstruir a trajetória real dos níveis $L_1(t)$ e $L_2(t)$ a partir unicamente da medição de $y(t) = L_2(t)$ e da tensão aplicada à bomba, avaliando como a posição dos autovalores de $(A - LC)$ afeta a rapidez de convergência do erro de estimação $\tilde{x}(t) = x(t) - \hat{x}(t)$ e a rejeição ou amplificação do ruído de medição.
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Primeiro Conjunto de Polos do Observador}
+
+\begin{justify}
+    \hspace{4ex}A dinâmica do erro de estimação é governada exclusivamente pelos autovalores da matriz $(A - LC)$. Quando os polos do observador são alocados em posições próximas aos polos de malha aberta da planta ($\lambda_{1,2} = -0{,}0656\text{ s}^{-1}$) ou com módulo reduzido, os ganhos de correção $L = \begin{bmatrix} l_1 & l_2 \end{bmatrix}^T$ resultam pequenos. Fisicamente, isso significa que o observador confia fortemente no seu próprio modelo matemático interno ($A\hat{x} + Bu$) e pondera suavemente o termo de inovação $L(y - \hat{y})$, produzindo estimativas pouco ruidosas, porém com convergência mais lenta caso haja discrepância de condição inicial ($\hat{x}(0) \neq x(0)$) ou incertezas de modelagem.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}No primeiro ensaio, ilustrado na Figura~\ref{fig:3a_obs_1}, alocaram-se os polos do observador em $p_{o1} = \dado{?}$ e $p_{o2} = \dado{?}$, resultando no vetor de ganhos $L = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}^T$. \pendente{Descrever o comportamento observado na figura: tempo aproximado para que $\hat{L}_1(t)$ e $\hat{L}_2(t)$ alcancem as curvas reais $L_1(t)$ e $L_2(t)$, erro de estimação em regime permanente, suavidade da curva estimada e eventual desvio estático decorrente de não linearidades da planta fora do ponto de operação de $15$~cm.}
+\end{justify}
+
+\figurasaida{Experimento 3A -- Resposta do observador de estados para o 1º conjunto de polos ($p_{o} = \dado{?}$).}{fig:3a_obs_1}%
+    {img/3a/obs_polos_1.png}
+
+%-------------------------------------------------------------
+\subsubsection{Segundo Conjunto de Polos do Observador}
+
+\begin{justify}
+    \hspace{4ex}Ao deslocar os polos do observador mais para a esquerda no semiplano complexo (aumentando a frequência natural dos modos de estimação), eleva-se a magnitude dos ganhos $l_1$ e $l_2$. Espera-se, com isso, uma redução substancial no tempo de convergência transitória das estimativas $\hat{L}_1$ e $\hat{L}_2$ em direção aos estados medidos pelos sensores, corrigindo rapidamente discrepâncias iniciais e erros paramétricos do modelo linearizado.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Para o segundo conjunto de polos, posicionados em $p_{o1} = \dado{?}$ e $p_{o2} = \dado{?}$ com ganhos $L = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}^T$ (Figura~\ref{fig:3a_obs_2}), verifica-se \pendente{analisar a resposta: redução do tempo de convergência para $\approx \dado{?}~s$, maior aderência de $\hat{L}_1$ à trajetória real de $L_1$ durante o transitório de subida e avaliação do nível de ruído nas estimativas em comparação ao primeiro conjunto}.
+\end{justify}
+
+\figurasaida{Experimento 3A -- Resposta do observador de estados para o 2º conjunto de polos ($p_{o} = \dado{?}$).}{fig:3a_obs_2}%
+    {img/3a/obs_polos_2.png}
+
+%-------------------------------------------------------------
+\subsubsection{Terceiro Conjunto de Polos do Observador}
+
+\begin{justify}
+    \hspace{4ex}Quando os polos do observador são alocados em posições excessivamente rápidas (muito distantes da origem no semiplano esquerdo), os ganhos $l_1$ e $l_2$ tornam-se elevados. Nessas condições, embora a convergência teórica do erro seja quase instantânea, o termo corretivo $L(y - \hat{y})$ passa a amplificar severamente os ruídos de alta frequência presentes no sensor de nível $y(t) = L_2(t)$, além de poder causar picos transitórios iniciais acentuados (\textit{peaking phenomenon}) na estimativa do estado não medido diretamente ($\hat{L}_1$).
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Na Figura~\ref{fig:3a_obs_3}, correspondente à alocação em $p_{o1} = \dado{?}$ e $p_{o2} = \dado{?}$ com $L = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}^T$, observa-se \pendente{discutir os resultados: velocidade de convergência quase imediata ($\approx \dado{?}~s$), presença de ruído amplificado nas curvas estimadas (especialmente em $\hat{L}_1$) ou eventual sobressinal na estimativa inicial}.
+\end{justify}
+
+\figurasaida{Experimento 3A -- Resposta do observador de estados para o 3º conjunto de polos ($p_{o} = \dado{?}$).}{fig:3a_obs_3}%
+    {img/3a/obs_polos_3.png}
+
+%-------------------------------------------------------------
+\subsubsection{Discussão Comparativa do Experimento 3A}
+
+\begin{justify}
+    \hspace{4ex}O estudo experimental dos diferentes conjuntos de polos no Experimento 3A comprova o compromisso clássico de projeto de um observador de Luenberger entre velocidade de reconstrução de estados e imunidade ao ruído de medição:
+\end{justify}
+
+\begin{itemize}
+    \item \textbf{Polos Lentos:} Proporcionam excelente filtragem das oscilações de medição do sensor, mas apresentam resposta lenta na correção do erro de estimação $\tilde{x}(t)$, fazendo com que $\hat{L}_1(t)$ demore a acompanhar variações rápidas da planta;
+    \item \textbf{Polos Excessivamente Rápidos:} Garantem convergência quase instantânea de $\hat{L}_2(t)$ e $\hat{L}_1(t)$ aos valores reais, porém exigem ganhos $L$ elevados que transferem o ruído elétrico do sensor de $L_2$ diretamente para as estimativas, o que pode degradar o sinal de controle quando o observador for utilizado para fechar a malha;
+    \item \textbf{Polos Moderados (Compromisso Ideal):} A alocação intermediária ($p_{o1} = \dado{?}$ e $p_{o2} = \dado{?}$) apresentou o melhor equilíbrio prático, assegurando convergência rápida do erro de estimação ($\approx \dado{?}~s$) sem contaminar significativamente os estados estimados com ruído.
+\end{itemize}
+
+\newpage
+
+%=============================================================
+\subsection{Experimento 3B: Seguidor de Referência com Estados Reais}
+
+\begin{justify}
+    \hspace{4ex}Nesta seção são apresentados os resultados do controle em malha fechada do nível do Tanque 2 ($L_2$) utilizando o seguidor de referência para entradas em degrau com realimentação direta dos estados reais medidos pelos sensores ($L_1$ e $L_2$). A inclusão do integrador do erro de rastreamento no sistema aumentado garante erro nulo em regime permanente ($e_{ss} = 0$) para o degrau de referência de $\dado{15}$~cm, enquanto a posição dos três polos alocados ($p_{c1}, p_{c2}, p_{c3}$) determina a velocidade de subida, o amortecimento e o esforço de controle exigido da bomba.
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Primeiro Conjunto de Polos do Seguidor}
+
+\begin{justify}
+    \hspace{4ex}No primeiro ensaio do seguidor de referência, ilustrado na Figura~\ref{fig:3b_seg_1}, alocaram-se os três polos do sistema aumentado em $p_{c1} = \dado{?}$, $p_{c2} = \dado{?}$ e $p_{c3} = \dado{?}$, resultando nos ganhos $k_1 = \dado{?}$ e $k_2 = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}$ calculados pela Fórmula de Ackermann. Para este primeiro teste, são apresentados a curva de resposta do nível $L_2(t)$ frente à referência, o sinal de controle enviado à bomba (limitado em $\pm 4$~V) e a evolução do erro de rastreamento.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Analisar detalhadamente a Figura~\ref{fig:3b_seg_1}: tempo de subida $t_r \approx \dado{?}~s$, sobressinal $M_p \approx \dado{?}\%$, tempo de acomodação $t_s \approx \dado{?}~s$ e anulação do erro em regime permanente ($e_{ss} \to 0$). Comentar o comportamento do sinal de controle $V_P(t)$: por quanto tempo permaneceu saturado em $+4$~V após o degrau e qual foi a tensão de equilíbrio atingida em regime permanente.}
+\end{justify}
+
+\figuraensaio{Experimento 3B -- Seguidor de referência com estados reais para o 1º conjunto de polos ($p_{c} = \dado{?}$).}{fig:3b_seg_1}%
+    {img/3b/seg_polos_1_saida.png}{img/3b/seg_polos_1_controle.png}{img/3b/seg_polos_1_erro.png}
+
+%-------------------------------------------------------------
+\subsubsection{Segundo Conjunto de Polos do Seguidor}
+
+\begin{justify}
+    \hspace{4ex}Para avaliar o efeito da velocidade dos polos de malha fechada sobre a resposta transitória da planta, o segundo ensaio foi realizado alocando-se os polos em $p_{c1} = \dado{?}$, $p_{c2} = \dado{?}$ e $p_{c3} = \dado{?}$, o que forneceu os ganhos $k_1 = \dado{?}$ e $k_2 = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}$. O deslocamento dos polos para regiões mais afastadas do eixo imaginário eleva a magnitude dos ganhos de realimentação $k_1$, $k_{21}$ e $k_{22}$, tornando a ação corretiva mais enérgica.
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}Conforme se observa na Figura~\ref{fig:3b_seg_2}, \pendente{descrever o resultado obtido: comparação do tempo de subida ($t_r \approx \dado{?}~s$) e do tempo de acomodação ($t_s \approx \dado{?}~s$) em relação ao primeiro conjunto, surgimento ou variação do sobressinal ($M_p \approx \dado{?}\%$) devido ao maior ganho integrador $k_1$ combinado com a saturação do atuador em $\pm 4$~V}.
+\end{justify}
+
+\figurasaida{Experimento 3B -- Seguidor de referência com estados reais para o 2º conjunto de polos ($p_{c} = \dado{?}$).}{fig:3b_seg_2}%
+    {img/3b/seg_polos_2_saida.png}
+
+%-------------------------------------------------------------
+\subsubsection{Terceiro Conjunto de Polos do Seguidor}
+
+\begin{justify}
+    \hspace{4ex}No terceiro ensaio (Figura~\ref{fig:3b_seg_3}), adotou-se a alocação $p_{c1} = \dado{?}$, $p_{c2} = \dado{?}$ e $p_{c3} = \dado{?}$, correspondente aos ganhos $k_1 = \dado{?}$ e $k_2 = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}$. \pendente{Explicar a intenção dessa escolha de polos (ex.: polos complexos conjugados com menor amortecimento, ou polos ainda mais rápidos/lentos) e discutir a curva resultante: tempo de subida $t_r \approx \dado{?}~s$, sobressinal $M_p \approx \dado{?}\%$, tempo de acomodação $t_s \approx \dado{?}~s$, presença de oscilações ou efeito de windup do integrador devido à saturação prolongada da bomba.}
+\end{justify}
+
+\figurasaida{Experimento 3B -- Seguidor de referência com estados reais para o 3º conjunto de polos ($p_{c} = \dado{?}$).}{fig:3b_seg_3}%
+    {img/3b/seg_polos_3_saida.png}
+
+%-------------------------------------------------------------
+\subsubsection{Discussão Comparativa do Experimento 3B}
+
+\begin{justify}
+    \hspace{4ex}A comparação entre os conjuntos de polos ensaiados no Experimento 3B demonstra a eficácia da estrutura de seguidor de referência por realimentação de estados no controle do sistema de segunda ordem:
+\end{justify}
+
+\begin{itemize}
+    \item \textbf{Rastreamento Assintótico:} Em todos os conjuntos de polos estáveis testados, a ação integral incorporada pelo estado aumentado $e(t)$ assegurou erro nulo em regime permanente ($L_2 \to \dado{15}$~cm), superando a limitação estática de realimentações puramente proporcionais;
+    \item \textbf{Papel da Realimentação Completa de Estados ($k_{21}$ e $k_{22}$):} Ao realimentar simultaneamente o nível do Tanque 1 ($L_1$) e do Tanque 2 ($L_2$), o controlador antecipa o efeito do acúmulo de água no tanque superior antes mesmo que essa vazão provoque elevação excessiva no tanque inferior, conferindo amortecimento superior ao de um controlador de malha única que enxerga apenas $L_2$;
+    \item \textbf{Limitação por Saturação do Atuador:} Polos alocados excessivamente à esquerda geram ganhos $K_a$ muito altos que mantêm a bomba saturada em $+4$~V por longos períodos, carregando o integrador do erro e provocando sobressinal elevado, razão pela qual o conjunto de polos moderados ($p_{c} = \dado{?}$) apresentou o melhor desempenho global ($t_s \approx \dado{?}~s$ e $M_p \approx \dado{?}\%$).
+\end{itemize}
+
+\newpage
+
+%=============================================================
+\subsection{Experimento 3C: Seguidor de Referência com Estados Estimados}
+
+\begin{justify}
+    \hspace{4ex}Nesta seção são apresentados os resultados do seguidor de referência operando com realimentação dos estados estimados $\hat{x}(t) = \begin{bmatrix} \hat{L}_1(t) & \hat{L}_2(t) \end{bmatrix}^T$ reconstruídos pelo observador de estados. Pelo Princípio da Separação, a equação característica global de malha fechada fatora-se no produto $\Delta_c(s)\cdot\Delta_o(s)$, permitindo combinar os ganhos $K_a$ (do seguidor) e $L$ (do observador) projetados anteriormente. Na prática, contudo, a resposta transitória total depende da relação de rapidez entre os polos do observador e os polos do controlador, bem como da não linearidade de saturação da bomba ($\pm 4$~V).
+\end{justify}
+
+%-------------------------------------------------------------
+\subsubsection{Primeira Combinação de Polos (Seguidor e Observador)}
+
+\begin{justify}
+    \hspace{4ex}Na primeira combinação ensaiada, apresentada na Figura~\ref{fig:3c_comb_1}, empregou-se o seguidor com polos em $p_{c} = \{\dado{?}\}$ ($k_1 = \dado{?}$, $k_2 = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}$) acoplado ao observador com polos em $p_{o} = \{\dado{?}\}$ ($L = \begin{bmatrix} \dado{?} & \dado{?} \end{bmatrix}^T$).
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Analisar a resposta obtida na Figura~\ref{fig:3c_comb_1}: tempo de subida $t_r \approx \dado{?}~s$, sobressinal $M_p \approx \dado{?}\%$, tempo de acomodação $t_s \approx \dado{?}~s$ e convergência de $\hat{L}_1$ e $\hat{L}_2$ para os estados reais durante o acionamento em malha fechada.}
+\end{justify}
+
+\figurasaida{Experimento 3C -- Seguidor com estados estimados: 1ª combinação ($p_{c} = \dado{?}$, $p_{o} = \dado{?}$).}{fig:3c_comb_1}%
+    {img/3c/comb_1_saida.png}
+
+%-------------------------------------------------------------
+\subsubsection{Segunda Combinação de Polos (Seguidor e Observador)}
+
+\begin{justify}
+    \hspace{4ex}Na segunda configuração (Figura~\ref{fig:3c_comb_2}), alterou-se a alocação para $p_{c} = \{\dado{?}\}$ no seguidor e $p_{o} = \{\dado{?}\}$ no observador (\pendente{explicar o que foi variado em relação à 1ª combinação: ex. observador mais rápido/lento para um mesmo seguidor, ou seguidor mais agressivo para um mesmo observador}).
+\end{justify}
+
+\begin{justify}
+    \hspace{4ex}\pendente{Discutir o comportamento observado na Figura~\ref{fig:3c_comb_2}: como a mudança dos polos do observador/seguidor impactou o sobressinal ($M_p \approx \dado{?}\%$), o tempo de acomodação ($t_s \approx \dado{?}~s$) e a suavidade da resposta de nível.}
+\end{justify}
+
+\figurasaida{Experimento 3C -- Seguidor com estados estimados: 2ª combinação ($p_{c} = \dado{?}$, $p_{o} = \dado{?}$).}{fig:3c_comb_2}%
+    {img/3c/comb_2_saida.png}
+
+%-------------------------------------------------------------
+\subsubsection{Terceira Combinação de Polos (Seguidor e Observador)}
+
+\begin{justify}
+    \hspace{4ex}Na terceira combinação avaliada (Figura~\ref{fig:3c_comb_3}), utilizaram-se os polos $p_{c} = \{\dado{?}\}$ para o seguidor e $p_{o} = \{\dado{?}\}$ para o observador. \pendente{Descrever os resultados observados: tempo de subida $t_r \approx \dado{?}~s$, sobressinal $M_p \approx \dado{?}\%$, tempo de acomodação $t_s \approx \dado{?}~s$ e efeito da sintonia escolhida sobre o esforço de controle e o ruído em regime permanente.}
+\end{justify}
+
+\figurasaida{Experimento 3C -- Seguidor com estados estimados: 3ª combinação ($p_{c} = \dado{?}$, $p_{o} = \dado{?}$).}{fig:3c_comb_3}%
+    {img/3c/comb_3_saida.png}
+
+%-------------------------------------------------------------
+\subsubsection{Comparação: Realimentação de Estados Reais (3B) vs. Estados Estimados (3C)}
+
+\begin{justify}
+    \hspace{4ex}Confrontando-se diretamente os resultados obtidos pelo seguidor de referência com medição direta dos estados reais (Experimento 3B) e pelo seguidor alimentado pelas estimativas do observador (Experimento 3C) para uma mesma alocação de polos do controlador, destacam-se os seguintes aspectos fundamentais:
+\end{justify}
+
+\begin{itemize}
+    \item \textbf{Desempenho Dinâmico e Princípio da Separação:} Quando os polos do observador são escolhidos suficientemente mais rápidos (de 2 a 5 vezes) que os polos dominantes do seguidor, o erro de estimação $\tilde{x}(t) = x(t) - \hat{x}(t)$ converge rapidamente para zero logo nos primeiros segundos do ensaio. A partir desse instante, $\hat{L}_1(t) \approx L_1(t)$ e $\hat{L}_2(t) \approx L_2(t)$, fazendo com que a trajetória de saída, o tempo de subida e o tempo de acomodação no Experimento 3C sejam muito próximos aos verificados no Experimento 3B (\pendente{citar valores comparativos: ex. $t_s \approx \dado{?}~s$ no 3B vs. $t_s \approx \dado{?}~s$ no 3C});
+    \item \textbf{Transitório Inicial e Erros de Modelagem:} No início do degrau (quando a planta parte de níveis distantes do ponto de linearização de $15$~cm), observa-se uma ligeira diferença transitória entre os dois esquemas, decorrente tanto do tempo de convergência inicial do observador quanto das discrepâncias entre o modelo linearizado $(A, B, C)$ e a dinâmica hidrodinâmica não linear real ($\sqrt{L_1}, \sqrt{L_2}$);
+    \item \textbf{Filtragem vs. Amplificação de Ruído:} Enquanto no Experimento 3B o ruído elétrico de ambos os sensores ($L_1$ e $L_2$) é multiplicado diretamente por $k_{21}$ e $k_{22}$ na composição do sinal de controle, no Experimento 3C a estimativa $\hat{x}(t)$ passa pela dinâmica integradora do observador. Com polos do observador bem dimensionados, o observador atua como um filtro passa-baixas natural sobre as variáveis de estado, suavizando o sinal de controle enviado à bomba;
+    \item \textbf{Vantagem Prática e Econômica:} O esquema do Experimento 3C comprova ser plenamente capaz de controlar a planta de segunda ordem utilizando exclusivamente o sensor da variável controlada final ($L_2$), dispensando o uso do sensor de nível do Tanque 1 na malha de controle sem perda relevante de desempenho, o que representa redução de custo de instrumentação e aumento de confiabilidade (tolerância à falha do sensor de $L_1$).
+\end{itemize}
+
+\newpage
+
+%%%%%%%%%% CONCLUSÃO %%%%%%%%%%%%%%%
+
+\thispagestyle{main}
+
+\section{CONCLUSÃO}
+
+\begin{justify}
+    \pendente{Escrever a conclusão geral do relatório da 3ª unidade.}
+\end{justify}
+
+\newpage
+
+%%%%%%%% REFERÊNCIAS %%%%%%%%%%%%%%%%%
+
+%\newpage
+\phantomsection
+\addcontentsline{toc}{section}{REFERÊNCIAS}
+
+\nocite{*}
+\bibliographystyle{ieeetr}
+\bibliography{bib/bibliografia}
+
+\newpage
+\appendix
+
+% Apêndice A
+\include{apendice}
+
+\end{document}
